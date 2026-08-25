@@ -38,6 +38,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         view3d.h view3d.cpp
         camera.h camera.cpp
         model.h model.cpp
+        entryitemmodel.h entryitemmodel.cpp
 
 
 
@@ -67,6 +68,19 @@ target_link_libraries(3DMaze PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
     Qt6::OpenGL
     Qt6::OpenGLWidgets
 )
+
+set(shaders_resource_files
+    "shaders/fshader.glsl"
+    "shaders/vshader.glsl"
+)
+
+qt6_add_resources(3DMaze "shaders"
+    PREFIX
+        "/"
+    FILES
+        ${shaders_resource_files}
+)
+
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an

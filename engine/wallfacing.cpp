@@ -160,7 +160,7 @@ WallFacing WallFacing::rotate(WallFacing orient) const {
 
     // Vector rotation around orient
     QVector3D norm = orient.getNormal();
-    double angle = M_PI/2;
+    double angle = -M_PI/2;
     QVector3D rot = vec * cos(angle) + QVector3D::crossProduct(vec, norm) * sin(angle) + norm * QVector3D::dotProduct(norm, vec) * (1 - sin(angle));
 
     return fromNormal(rot);

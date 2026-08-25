@@ -4,8 +4,9 @@ View3D::View3D(QWidget *parent)
     : QOpenGLWidget{parent}
 {
     setFocusPolicy(Qt::StrongFocus);
+    this->setMinimumSize(500, 500);
 
-    camera = new Camera(2.5, QVector3D(2.0, 0.0, 0.0), QVector3D(0, 0, 0), this);
+    camera = new Camera(2.5, QVector3D(50.0, 50.0, 50.0), QVector3D(0, 0, 0), this);
 
     updateTimer.start(16, this);
 }
@@ -26,7 +27,7 @@ void View3D::initializeGL()
     glEnable(GL_DEPTH_TEST);
 
     // Enable back face culling
-    glEnable(GL_CULL_FACE);
+    //glEnable(GL_CULL_FACE);
 
     initShaders();
 
@@ -36,15 +37,12 @@ void View3D::initializeGL()
     program.setUniformValue("model", QMatrix4x4());
     program.release();
 
-    skybox.bind();
-    skybox.setUniformValue("projection", projection);
-    skybox.setUniformValue("model", QMatrix4x4());
-    skybox.release();
-
-    initialized = true;
+    for (Model *model : modelList) {
+        model->initBuffers(this);
+    }
 }
 
-void Renderer::paintGL()
+void View3D::paintGL()
 {
     // Clear color and depth buffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -59,23 +57,14 @@ void Renderer::paintGL()
     program.setUniformValue("projection", projection);
 
     //program.setUniformValue("mvp_matrix", projection * view);
-    for (auto* terrain : terrains) {
-        terrain->drawMesh(&program);
+    for (auto* model : modelList) {
+        model->drawModel(&program);
     }
 
-    //program.setUniformValue("texture", 0);
-    // engine->drawCubeGeometry(&program);
     program.release();
-    skybox.bind();
-
-    skybox.setUniformValue("view", view);
-    skybox.setUniformValue("projection", projection);
-    tbox->drawMesh(&skybox);
-
-    skybox.release();
 }
 
-void Renderer::resizeGL(int w, int h)
+void View3D::resizeGL(int w, int h)
 {
     glViewport(0,0,w,h);
     qreal aspect = qreal(w) / qreal(h ? h : 1);
@@ -91,12 +80,9 @@ void Renderer::resizeGL(int w, int h)
     program.bind();
     program.setUniformValue("projection", projection);
     program.release();
-    skybox.bind();
-    skybox.setUniformValue("projection", projection);
-    skybox.release();
 }
 
-void Renderer::initShaders() {
+void View3D::initShaders() {
     program.bind();
     // Compile vertex shader
     if (!program.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/vshader.glsl")){
@@ -129,56 +115,18 @@ void Renderer::initShaders() {
     program.setUniformValue("lightColor", QVector4D(1.0, 1.0, 1.0, 1.0));
     program.setUniformValue("lightPos", QVector4D(camera->position(), 1.0));
     program.release();
-
-    skybox.bind();
-    if (!skybox.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/skybox.vsh")){
-        qDebug() << "Error: couldn't compile vertex shader";
-        qDebug() << skybox.log();
-        close();
-    }
-
-    // Compile fragment shader
-    if (!skybox.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/skybox.fsh")){
-        qDebug() << "Error: couldn't compile fragment shader";
-        qDebug() << skybox.log();
-        close();
-    }
-
-    // Link shader pipeline
-    if (!skybox.link()){
-        qDebug() << "Error: couldn't link shaders";
-        qDebug() << skybox.log();
-        close();
-    }
-
-    // Bind shader pipeline for use
-    if (!skybox.bind()){
-        qDebug() << "Error: couldn't bind shaders";
-        qDebug() << skybox.log();
-        close();
-    }
-    skybox.release();
 }
 
-void Renderer::allocateMeshData(const QByteArray &imageData, QRectF position, const QByteArray &topLayer, int resolution) {
-    //QImage image((const unsigned char*)imageData.data(), imageWidth, imageHeight, QImage::Format_ARGB32);
-    QImage image;
-    image.loadFromData(imageData);
-    QImage texture;
-    texture.loadFromData(topLayer);
-    //image.save("debug.png", "PNG");
-    //qDebug() << "Allocating at" << position;
-    Terrain* terrainChunk = new Terrain(image, position, resolution, texture, this);
-    terrains.append(terrainChunk);
-    if (!firstTerrainLoaded) {
-        int highestPoint = terrainChunk->getHighestPoint();
-        qDebug() << "Highest point: " << highestPoint;
-        camera->setY(highestPoint);
+void View3D::appendModel(Model *model) {
+    modelList.append(model);
+    if (this->isValid()) {
+        makeCurrent();
+        model->initBuffers(this);
+        doneCurrent();
     }
-    firstTerrainLoaded = true;
 }
 
-void Renderer::timerEvent(QTimerEvent *event)
+void View3D::timerEvent(QTimerEvent *event)
 {
     // deltaTime?
     if (event->timerId() == updateTimer.timerId()) {
@@ -187,12 +135,12 @@ void Renderer::timerEvent(QTimerEvent *event)
     }
 }
 
-void Renderer::logMessage(const QOpenGLDebugMessage &message) {
+void View3D::logMessage(const QOpenGLDebugMessage &message) {
     if (message.severity() != QOpenGLDebugMessage::NotificationSeverity) {
         qDebug() << "[ OpenGLError ]" << message.severity() << message.message();
     }
 }
-void Renderer::logMessages() {
+void View3D::logMessages() {
     const QList<QOpenGLDebugMessage> messages = logger->loggedMessages();
     for (const QOpenGLDebugMessage &message : messages) {
         if (message.severity() != QOpenGLDebugMessage::NotificationSeverity) {
@@ -201,10 +149,10 @@ void Renderer::logMessages() {
     }
 }
 
-Renderer::~Renderer() {
+View3D::~View3D() {
     makeCurrent();
-    for (int i = 0; i < terrains.size(); i++) {
-        delete terrains[i];
+    for (int i = 0; i < modelList.size(); i++) {
+        delete modelList[i];
     }
     delete camera;
     doneCurrent();

@@ -4,12 +4,19 @@
 #include <QMainWindow>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QSpinBox>
+#include <QDoubleSpinBox>
+#include <QCheckBox>
+#include <QListView>
+#include <QTableView>
+#include <QStandardItemModel>
 
 #include "engine/generator.h"
 #include "parsing/mesh.h"
 #include "parsing/objparser.h"
+#include "view3d.h"
 
-class BaseWindow : public QMainWindow
+class BaseWindow : public QWidget
 {
     Q_OBJECT
 
@@ -20,5 +27,14 @@ public:
     Generator *gen;
     QHBoxLayout *outerLayout;
     QVBoxLayout *parameterLayout;
+
+    QCheckBox *linkedSize;
+    QDoubleSpinBox* sizeBoxes[3];
+    QSpinBox* roomBoxes[3];
+    QDoubleSpinBox* wallPtg;
+    QTableView *openingList;
+    QStandardItemModel *openingListModel;
+
+    View3D *renderView;
 };
 #endif // BASEWINDOW_H

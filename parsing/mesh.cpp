@@ -10,20 +10,13 @@ Mesh::Mesh(Generator *_generator) : generator(_generator), mazeDims(_generator->
 
     vBoxList = std::vector<VertexBox*>(mazeDims.y * mazeDims.z * mazeDims.x);
 
-    outerSize = 0;
+    m_size = 0;
     // 4 * 2 for opening (change to 4 * n when added functionality)
-    outerMaxSize = (mazeDims.x+1) * (mazeDims.z+1) * 2
+    maxSize = (mazeDims.x+1) * (mazeDims.z+1) * 2
                 + (mazeDims.x+1) * (mazeDims.y+1) * 2
                 + (mazeDims.z+1) * (mazeDims.y+1) * 2
                 //- 2 * (mazeDims.x + mazeDims.y + mazeDims.z)
                 + 4 * 2;
-    //outerVertices = new Vector3D[outerSize);
-    //outerHash = new Hashtable<>();
-
-    innerSize = 0;
-    innerMaxSize = 6 * 4 * mazeDims.x * mazeDims.y * mazeDims.z;
-    //innerVertices = new Vector3D[innerSize];
-    //innerHash = new Hashtable<>();
 
     // Traverse order: Y, Z, X
     for (int y = 0; y < mazeDims.y; y++) {
@@ -40,12 +33,44 @@ Mesh::Mesh(Generator *_generator) : generator(_generator), mazeDims(_generator->
     faces.clear();
     fillInnerVertices();
     fillOuterVertices();
-    if (innerSize != innerMaxSize) {
-        //qDebug() << "Couldn't fill all inner vertices " << innerInd << " " << innerSize;
+}
+
+// Orients the vertices such that the normal becomes <normal>
+std::array<QVector3D, 4> orient(std::array<QVector3D, 4> vertices, QVector3D normal) {
+    std::array<QVector3D, 4> res = {};
+    int minIndex = 0, maxIndex = 0;
+    double minMod = 9999999, maxMod = 0;
+    for (int i = 0; i < 4; i++) {
+        const QVector3D vec = vertices[i];
+        if (vec.length() < minMod) {
+            minIndex = i;
+            minMod = vec.length();
+        }
+        if (vec.length() > maxMod) {
+            maxIndex = i;
+            maxMod = vec.length();
+        }
     }
-    if (outerSize != outerMaxSize) {
-        //qDebug() << "Couldn't fill all outer vertices " << outerInd << " " << outerSize;
+    QVector3D minVec = res[0] = vertices[minIndex];
+    QVector3D maxVec = res[2] = vertices[maxIndex];
+
+    for (int i = 0; i < 4; i++) {
+        const QVector3D vec = vertices[i];
+        if (i != minIndex && i != maxIndex) {
+            QVector3D vec1 = vec - minVec;
+            QVector3D vec2 = maxVec - vec;
+            QVector3D cross = QVector3D::crossProduct(vec1, vec2).normalized();
+
+            // if oriented with normal
+            if ((cross - normal).length() < 1) {
+                res[1] = vec;
+            }
+            else {
+                res[3] = vec;
+            }
+        }
     }
+    return res;
 }
 
 void Mesh::fillInnerVertices() {
@@ -61,9 +86,6 @@ void Mesh::fillInnerVertices() {
                 TileBox *tBox = tile->tBox;
                 VertexBox *vBox = vBoxList[index];
 
-                // Vertices are stored uniformly
-                int absoluteIndex = innerSize + 1;
-
                 for (const WallFacing facing : WallFacing::allFacings) {
                     QVector3D normal = facing.getNormal();
                     int x1 = x + (int) normal.x();
@@ -73,14 +95,14 @@ void Mesh::fillInnerVertices() {
 
                     // in-bound processing
                     std::array<QVector3D, 4> innerVertices = vBox->getIWVertices(facing);
-                    std::array<int, 4> processedIndices = transcribeVertices(innerVertices, VertexClass::INNER);
+                    //std::array<int, 4> processedIndices = transcribeVertices(innerVertices);
 
                     // Only add gateway faces when looking at positive direction
                     // (to avoid duplicates, as from the concept, walls are overlapped)
                     if (tile->wall.exists(facing)) {
                         //qDebug() << facing << " " << facing.inverse();
                         faces.push_back(new Face(
-                            processedIndices,
+                            transcribeVertices(orient(innerVertices, facing.inverse().getNormal())),
                             normalIndex(facing.inverse())
                             ));
                     } else {
@@ -88,7 +110,8 @@ void Mesh::fillInnerVertices() {
                         if (facing.isPositive() && generator->valid(y1, z1, x1)) {
                             VertexBox* adjVBox = vBoxList[nextIndex];
                             std::array<int, 4> adjIndices = adjVBox->getIWIndices(facing.inverse());
-                            std::array<int, 4> processedAdjIndices = transcribeVertices(adjVBox->getIWVertices(facing.inverse()), VertexClass::INNER);
+                            std::array<QVector3D, 4> adjVertices = adjVBox->getIWVertices(facing.inverse());
+                            std::array<int, 4> processedAdjIndices = transcribeVertices(adjVertices);
 
                             // Vector from which the face construction starts
                             QVector3D startVector = innerVertices[0];
@@ -107,10 +130,8 @@ void Mesh::fillInnerVertices() {
                                 int i1 = i, j1 = (oppositeIndex - i + 4) % 4;
                                 int i2 = (i1 + 1) % 4, j2 = (j1 - 1 + 4) % 4;
 
-                                faces.push_back(new Face({
-                                                       processedIndices[i1], processedIndices[i2],
-                                                       processedAdjIndices[j2], processedAdjIndices[j1]
-                                                   },
+                                auto orientedVertices = orient({innerVertices[i1], innerVertices[i2], adjVertices[j2], adjVertices[j1]}, gatewayFacing.getNormal());
+                                faces.push_back(new Face(transcribeVertices(orientedVertices),
                                                          normalIndex(gatewayFacing)
                                                    ));
 
@@ -163,7 +184,7 @@ void Mesh::fillOuterVertices() {
                                 rot = rot.rotate(facing);
                             }*/
 
-                        std::array<int, 4> outerIndices = transcribeVertices(outerVertices, VertexClass::OUTER);
+                        std::array<int, 4> outerIndices = transcribeVertices(outerVertices);
                         if (tile->wall.exists(facing)) {
                             faces.push_back(new Face(
                                 outerIndices,
@@ -186,7 +207,7 @@ void Mesh::fillOuterVertices() {
                                 innerWall.origin + innerWall.up
                             };
 
-                            std::array<int, 4> extraIndices = transcribeVertices(extraVertices, VertexClass::OUTER);
+                            std::array<int, 4> extraIndices = transcribeVertices(extraVertices);
                             // outer wall construction
                             for (int i = 0; i < 4; i++) {
                                 int i1 = i, i2 = (i + 1)%4;
@@ -199,16 +220,16 @@ void Mesh::fillOuterVertices() {
                             }
 
                             std::array<QVector3D, 4> innerVertices = vBox->getIWVertices(facing);
-                            std::array<int, 4> innerIndices = transcribeVertices(innerVertices, VertexClass::INNER);
+                            //std::array<int, 4> innerIndices = transcribeVertices(innerVertices);
                             // gateway construction
 
                             WallFacing gatewayFacing = facing.up();
                             for (int i = 0; i < 4; i++) {
                                 int i1 = i, i2 = (i + 1)%4;
-                                faces.push_back(new Face({
-                                                       innerIndices[i1], innerIndices[i2],
-                                                       extraIndices[i2], extraIndices[i1]
-                                                   },
+                                auto orientedVertices = orient({extraVertices[i1], extraVertices[i2], innerVertices[i2], innerVertices[i1]}, gatewayFacing.getNormal());
+                                //qDebug() << extraVertices[i1] << extraVertices[i2] << innerVertices[i2] << innerVertices[i1] << gatewayFacing;
+                                //qDebug() << orientedVertices;
+                                faces.push_back(new Face(transcribeVertices(orientedVertices),
                                                          normalIndex(gatewayFacing)
                                                    ));
                                 gatewayFacing = gatewayFacing.rotate(facing);

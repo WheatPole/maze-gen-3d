@@ -22,14 +22,15 @@ private:
             return qHashMulti(0, t.x(), t.y(), t.z());
         }
     };
+    int maxSize, m_size;
 
 public:
     // INNER - vertices used for inner walls
     // OUTER - vertices used for outer walls
     // EXTRA - additional vertices for constructing wall entrances
-    enum class VertexClass {
+    /*enum class VertexClass {
         INNER, OUTER
-    };
+    };*/
 
     /*static size_t qHash(const QVector3D &key, size_t seed = 0) noexcept {
         return qHashMulti(seed, key.x(), key.y(), key.z());
@@ -38,12 +39,13 @@ public:
     triplet<int> mazeDims;
     Generator *generator;
     std::vector<VertexBox*> vBoxList;
-    std::vector<QVector3D> innerVertices;
-    std::vector<QVector3D> outerVertices;
-    int innerSize, outerSize;
-    int innerMaxSize, outerMaxSize;
+    std::vector<QVector3D> vertices;
+    std::unordered_map<QVector3D, int, hash> vertexHash;
 
-    std::unordered_map<QVector3D, int, hash> innerHash, outerHash;
+    // Returns the size of currently appended vertices
+    inline int size() const {
+        return m_size;
+    }
 
     std::vector<QVector3D> normals = {
         WallFacing::getNormal(WallFacing::XNEG),
@@ -53,6 +55,15 @@ public:
         WallFacing::getNormal(WallFacing::ZNEG),
         WallFacing::getNormal(WallFacing::ZPOS),
     };
+
+    // First should go the inner faces, then the outer faces
+    std::vector<Face*> faces;
+
+    Mesh(Generator *generator);
+
+private:
+    void fillInnerVertices();
+    void fillOuterVertices();
 
     inline int normalIndex(WallFacing facing) const {
         switch (facing.facing) {
@@ -66,16 +77,6 @@ public:
         return 1;
     }
 
-    // First should go the inner faces, then the outer faces
-    std::vector<Face*> faces;
-
-    Mesh(Generator *generator);
-
-    void fillInnerVertices();
-
-    void fillOuterVertices();
-
-private:
     void roundVec(QVector3D &vec, int dec) {
         long mul = 1;
         for (int i = 0; i < dec; i++) mul *= 10;
@@ -86,29 +87,16 @@ private:
 
     // TODO: look into why there are STILL duplicates on edges
     // Converts vertices to Wavefront obj-like face vertices and return indices
-    std::array<int, 4> transcribeVertices(std::array<QVector3D, 4> vertices, VertexClass type) {
+    std::array<int, 4> transcribeVertices(std::array<QVector3D, 4> vertexData) {
         std::array<int, 4> result;
-        if (type == VertexClass::INNER) {
-            for (int i = 0; i < vertices.size(); i++) {
-                QVector3D vec = vertices[i];
-                roundVec(vec, 4);
-                if (innerHash.find(vec) == innerHash.end()) {
-                    innerVertices.push_back(vec);
-                    innerHash[vec] = innerSize++;
-                }
-                result[i] = innerHash[vec] + 1;
+        for (int i = 0; i < vertexData.size(); i++) {
+            QVector3D vec = vertexData[i];
+            roundVec(vec, 4);
+            if (vertexHash.find(vec) == vertexHash.end()) {
+                vertices.push_back(vec);
+                vertexHash[vec] = m_size++;
             }
-        }
-        else if (type == VertexClass::OUTER) {
-            for (int i = 0; i < vertices.size(); i++) {
-                QVector3D vec = vertices[i];
-                roundVec(vec, 4);
-                if (outerHash.find(vec) == outerHash.end()) {
-                    outerVertices.push_back(vec);
-                    outerHash[vec] = outerSize++;
-                }
-                result[i] = outerHash[vec] + outerSize + 1;
-            }
+            result[i] = vertexHash[vec] + 1;
         }
         return result;
     }
@@ -116,7 +104,7 @@ private:
     // Returns the index of the indices list of the vertex box, where vector "target" is on the
     // line facing towards the "facing" direction (so only 2 axes are equal, and not
     // the "facing" axis)
-    int lookupVertex(WallFacing facing, std::array<int ,4> list, QVector3D target, VertexBox &box) {
+    int lookupVertex(WallFacing facing, std::array<int, 4> list, QVector3D target, VertexBox &box) {
         //auto vert = box.vertices;
         for (int i = 0; i < list.size(); i++) {
             bool eqX = abs( box.at(list[i]).x() - target.x() ) < 1e-5;

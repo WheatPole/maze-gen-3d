@@ -16,7 +16,7 @@
 #include <QList>
 #include <QKeyEvent>
 #include <QOpenGLDebugLogger>
-#include "./parsing/mesh.h"
+#include "model.h"
 #include "camera.h"
 
 class View3D : public QOpenGLWidget, protected QOpenGLFunctions
@@ -25,9 +25,8 @@ class View3D : public QOpenGLWidget, protected QOpenGLFunctions
 public:
     View3D(QWidget *parent = nullptr);
     void initShaders();
-    // Resolution is the amount of squares per row or column
-    void allocateMeshData(const QByteArray &imageData, QRectF position, const QByteArray &topLayer, int resolution = 100);
-    void drawMesh();
+    void appendModel(Model* model);
+    //void drawModel();
     ~View3D();
     void initializeGL() override;
     void paintGL() override;
@@ -46,11 +45,11 @@ private:
     //Terrain *terrain = nullptr;
 
     Camera *camera;
-    QList<Mesh*> meshList;
+    QList<Model*> modelList;
 
     int verticesSize = 0;
     int indicesSize = 0;
-    bool initialized = false;
+    //bool initialized = false;
     QMatrix4x4 projection;
     QOpenGLTexture *texture;
     QBasicTimer updateTimer;

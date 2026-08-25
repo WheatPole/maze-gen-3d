@@ -62,6 +62,17 @@ public:
         return (val() == XPOS || val() == ZPOS || val() == YPOS);
     }
 
+    inline std::string toString() const {
+        switch (facing) {
+        case Facing::XNEG: return "-X";
+        case Facing::XPOS: return "+X";
+        case Facing::YNEG: return "-Y";
+        case Facing::YPOS: return "+Y";
+        case Facing::ZNEG: return "-Z";
+        case Facing::ZPOS: return "+Z";
+        default: return "-";
+        }
+    }
     /*inline const static WallFacing* allFacings() {
         return allArray;
     }*/
