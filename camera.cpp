@@ -8,8 +8,11 @@ Camera::Camera(qreal cameraSpeed, QVector3D cameraPos, QVector3D cameraTarget, Q
     minCameraSpeed = 0.1;
     screen->installEventFilter(this);
 
-    _yaw = 180;
-    _pitch = 0;
+    QVector3D camToTarget = (_cameraTarget - _cameraPos).normalized();
+
+    _yaw = qRadiansToDegrees(atan2(camToTarget.x(), camToTarget.z()));
+    _pitch = -qRadiansToDegrees(asin(-camToTarget.y()));
+    qDebug() << camToTarget << _yaw << _pitch;
     QVector3D direction;
     direction.setX(cos(qDegreesToRadians(_yaw)) * cos(qDegreesToRadians(_pitch)));
     direction.setY(sin(qDegreesToRadians(_pitch)));
@@ -24,6 +27,7 @@ QMatrix4x4 Camera::getView() {
 }
 
 bool Camera::update() {
+    //qDebug() << _cameraPos << " looking at " << _cameraTarget;
     bool changed = false;
     if (movement[Direction::Forward]) {
         //_cameraPos += _cameraSpeed * _cameraFront; changed = true;
@@ -134,7 +138,7 @@ bool Camera::eventFilter(QObject* object, QEvent* event) {
 
         float sensitivity = 0.2f;
         offset *= sensitivity;
-
+qDebug() << _yaw << _pitch;
 
         _yaw += -offset.x();
         _pitch += offset.y();
@@ -143,7 +147,7 @@ bool Camera::eventFilter(QObject* object, QEvent* event) {
             _pitch = 89.0f;
         if(_pitch < -89.0f)
             _pitch = -89.0f;
-
+qDebug() << _yaw << _pitch;
         QVector3D direction;
         direction.setX(cos(qDegreesToRadians(_yaw)) * cos(qDegreesToRadians(_pitch)));
         direction.setY(sin(qDegreesToRadians(_pitch)));

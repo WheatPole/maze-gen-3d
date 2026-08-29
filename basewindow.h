@@ -11,6 +11,7 @@
 #include <QTableView>
 #include <QStandardItemModel>
 
+#include "entrytablemodel.h"
 #include "engine/generator.h"
 #include "parsing/mesh.h"
 #include "parsing/objparser.h"
@@ -33,7 +34,7 @@ public:
     QSpinBox* roomBoxes[3];
     QDoubleSpinBox* wallPtg;
     QTableView *openingList;
-    QStandardItemModel *openingListModel;
+    EntryTableModel *openingListModel;
 
     View3D *renderView;
 };

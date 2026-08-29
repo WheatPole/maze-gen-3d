@@ -110,12 +110,13 @@ BaseWindow::BaseWindow(QWidget *parent)
             openingList = new QTableView(this);
             parameterLayout->addWidget(openingList);
 
-            openingListModel = new QStandardItemModel(0, 3, this);
+            openingListModel = new EntryTableModel(this);
             openingList->setEditTriggers(QAbstractItemView::NoEditTriggers);
             openingList->setSelectionBehavior(QAbstractItemView::SelectRows);
 
 
             openingListModel->setHorizontalHeaderLabels(QStringList() << "Local index" << "Facing");
+
 
             QList<QStandardItem*> open1 = {
                 new QStandardItem("0"),

@@ -38,7 +38,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         view3d.h view3d.cpp
         camera.h camera.cpp
         model.h model.cpp
-        entryitemmodel.h entryitemmodel.cpp
+        entrytablemodel.h entrytablemodel.cpp
 
 
 
