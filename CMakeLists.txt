@@ -13,6 +13,7 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 find_package(Qt6 REQUIRED COMPONENTS OpenGL)
 find_package(Qt6 REQUIRED COMPONENTS OpenGLWidgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
 set(PROJECT_SOURCES
         main.cpp
@@ -39,6 +40,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         camera.h camera.cpp
         model.h model.cpp
         entrytablemodel.h entrytablemodel.cpp
+        entrytable.h entrytable.cpp
 
 
 
@@ -68,6 +70,7 @@ target_link_libraries(3DMaze PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
     Qt6::OpenGL
     Qt6::OpenGLWidgets
 )
+target_link_libraries(3DMaze PRIVATE Qt6::Core Qt6::Widgets)
 
 set(shaders_resource_files
     "shaders/fshader.glsl"

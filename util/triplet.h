@@ -2,6 +2,8 @@
 #define TRIPLET_H
 
 #include <QVector3D>
+#include <QVariant>
+#include <string>
 
 template <typename T>
 struct triplet {
@@ -28,7 +30,9 @@ struct triplet {
     bool operator >=(const triplet<T> &trip) const {
         return (x >= trip.x) && (y >= trip.y) && (z >= trip.z);
     }
-
+    inline std::string toString() const {
+        return "(" + std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z) + ")";
+    }
 };
 
 #endif // TRIPLET_H

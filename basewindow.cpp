@@ -1,5 +1,6 @@
 #include "basewindow.h"
 #include <QLabel>
+#include <QHeaderView>
 
 QFrame* separatorLine() {
     QFrame* separatorLine = new QFrame();
@@ -107,31 +108,15 @@ BaseWindow::BaseWindow(QWidget *parent)
             QLabel *openingsLbl = new QLabel("Openings", this);
             parameterLayout->addWidget(openingsLbl);
 
-            openingList = new QTableView(this);
-            parameterLayout->addWidget(openingList);
+            entranceTable = new EntryTable();
+            parameterLayout->addWidget(entranceTable);
 
-            openingListModel = new EntryTableModel(this);
-            openingList->setEditTriggers(QAbstractItemView::NoEditTriggers);
-            openingList->setSelectionBehavior(QAbstractItemView::SelectRows);
+            //openingList->setHorizontalHeader(new QHeaderView());
 
+            //openingListModel->setHorizontalHeaderLabels(QStringList() << "Local index" << "Facing");
 
-            openingListModel->setHorizontalHeaderLabels(QStringList() << "Local index" << "Facing");
-
-
-            QList<QStandardItem*> open1 = {
-                new QStandardItem("0"),
-                new QStandardItem("(0,0,0)"),
-                new QStandardItem("-X")
-            };
-            QList<QStandardItem*> open2 = {
-                new QStandardItem("1"),
-                new QStandardItem("(2,2,2)"),
-                new QStandardItem("+Z")
-            };
-            openingListModel->appendRow(open1);
-            openingListModel->appendRow(open2);
-
-            openingList->setModel(openingListModel);
+            entranceTable->model()->appendData({0,0,0}, WallFacing::XNEG);
+            entranceTable->model()->appendData({2,2,2}, WallFacing::ZPOS);
 
             QHBoxLayout *openingLyt = new QHBoxLayout(this);
             openingLyt->setAlignment(Qt::AlignTop);

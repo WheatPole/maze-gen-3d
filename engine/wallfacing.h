@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cmath>
 #include <QVector3D>
+#include <QVariant>
 
 enum class Facing {
     XPOS = 1,
@@ -73,6 +74,10 @@ public:
         default: return "-";
         }
     }
+
+    /*inline operator int() const {
+        return val();
+    }*/
     /*inline const static WallFacing* allFacings() {
         return allArray;
     }*/

@@ -20,16 +20,18 @@ private:
 public:
     explicit EntryTableModel(QObject *parent = nullptr);
     //QModelIndex	index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
-    bool insertData(int row, triplet<int> index, WallFacing facing);
+    bool insertData(int row, triplet<int> lIndex, WallFacing facing);
+    bool appendData(triplet<int> lIndex, WallFacing facing);
     RowItem eraseData(int row);
-
-    inline int rowCount() const noexcept {
+    inline int rowCount(const QModelIndex &parent = QModelIndex()) const {
         return rowData.size();
     }
-    constexpr inline int columnCount() const {
-        return 2;
+    constexpr inline int columnCount(const QModelIndex &parent = QModelIndex()) const {
+        return 3;
     }
-inline void data()
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const;
+    Qt::ItemFlags flags(const QModelIndex &index) const;
 
 private:
 
