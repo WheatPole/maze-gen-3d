@@ -21,7 +21,7 @@ public:
         Down = 5
     };
 
-    explicit Camera(qreal cameraSpeed, QVector3D cameraPos = QVector3D(2.0, 0, 0), QVector3D cameraTarget = QVector3D(0, 0, 0), QOpenGLWidget *parent = nullptr);
+    explicit Camera(qreal cameraSpeed, QVector3D cameraPos = QVector3D(2.0, 0, 0), QVector3D cameraTarget = QVector3D(0, 0, 0), bool movable = true, QOpenGLWidget *parent = nullptr);
     QMatrix4x4 getView();
     inline QVector3D position() {
         return _cameraPos;
@@ -33,7 +33,14 @@ public:
         return _pitch;
     }
 
-    inline QVector3D cameraDirection() {
+    inline QVector3D calcCameraFront() {
+        QVector3D direction;
+        direction.setX(cos(qDegreesToRadians(_yaw)) * cos(qDegreesToRadians(_pitch)));
+        direction.setY(sin(qDegreesToRadians(_pitch)));
+        direction.setZ(sin(qDegreesToRadians(_yaw)) * cos(qDegreesToRadians(_pitch)));
+        return direction.normalized();
+    }
+    inline QVector3D cameraDirection() const {
         return (_cameraPos - _cameraTarget).normalized();
     }
     inline QVector3D cameraRight();
@@ -72,8 +79,9 @@ private:
     bool movement[6] = {};
     QOpenGLWidget *screen;
 
-    // slower movement when going towards the ground
-    bool realisticCamera = true;
+    bool allowMovement;
+    // initial distance between camera and target, used mainly for third person perspective
+    double staticDistance;
     qreal maxCameraSpeed = 1;
     qreal minCameraSpeed = 0;
     //QMap<int, bool> keys;

@@ -7,21 +7,20 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
-#include "./parsing/mesh.h"
+#include "../parsing/mesh.h"
 
 
 class Model : public QObject
 {
     Q_OBJECT
 public:
-    Model(Mesh *data, QOpenGLShaderProgram *program = nullptr, QObject *parent = nullptr);
-    void initBuffers(QOpenGLFunctions *parent);
-    void refreshData();
-    void bindVertices();
-    void drawModel(QOpenGLShaderProgram *program );
+    Model(Mesh *data, QObject *parent = nullptr);
+    virtual void initBuffers(QOpenGLFunctions *parent);
+    virtual void refreshData();
+    virtual void bindVertices();
+    virtual void drawModel(QOpenGLShaderProgram *program );
 
-    QOpenGLShaderProgram *m_program;
-private:
+protected:
     struct VertexData
     {
         QVector3D position;
@@ -48,13 +47,15 @@ private:
     };
 
     Mesh *mesh;
-    //QOpenGLTexture *texture;
-    //QOpenGLWidget *_parent;
+
     QOpenGLBuffer arrayBuffer, indexBuffer;
     QOpenGLVertexArrayObject vao;
     QList<VertexData> vertices;
     QOpenGLFunctions *glFunc;
     QList<GLuint> indices;
+
+    bool meshLoaded = false;
+    bool verticesBound = false;
 };
 
 #endif // MODEL_H

@@ -36,11 +36,13 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         parsing/vertexbox.h
         util/triplet.h
         parsing/objparser.h parsing/objparser.cpp
-        view3d.h view3d.cpp
-        camera.h camera.cpp
-        model.h model.cpp
-        entrytablemodel.h entrytablemodel.cpp
-        entrytable.h entrytable.cpp
+        rendering/view3d.h rendering/view3d.cpp
+        rendering/camera.h rendering/camera.cpp
+        rendering/model.h rendering/model.cpp
+        ui/entrytablemodel.h ui/entrytablemodel.cpp
+        ui/entrytable.h ui/entrytable.cpp
+        rendering/outlinedmodel.h rendering/outlinedmodel.cpp
+        shaders/vshader_outline.glsl
 
 
 

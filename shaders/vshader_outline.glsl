@@ -16,7 +16,6 @@ attribute vec3 a_normal;
 //attribute vec2 a_texcoord;
 
 varying vec2 v_texcoord;
-uniform int outline;
 
 varying vec3 Normal;
 varying vec3 FragPos;
@@ -24,7 +23,7 @@ varying vec3 FragPos;
 void main()
 {
     // Calculate vertex position in screen space
-    gl_Position = (projection * view /* * model */) * vec4(a_position + float(outline == 1) * (a_normal*0.0001), 1.0);
+    gl_Position = (projection * view /* * model */) * vec4(a_position + (a_normal), 1.0);
     //v_texcoord = a_texcoord;
     Normal = a_normal;
     FragPos = a_position;

@@ -1,24 +1,26 @@
-#include "model.h"
+#include "outlinedmodel.h"
 
-Model::Model(Mesh *data, QOpenGLShaderProgram *program, QObject *parent)
-    : mesh(data), m_program(program),
-    indexBuffer(QOpenGLBuffer::IndexBuffer),
-    arrayBuffer(QOpenGLBuffer::VertexBuffer), QObject{parent} {
+OutlinedModel::OutlinedModel(Mesh* data, QObject *parent)
+    : Model(data, parent),
+    outlineIndexBuffer(QOpenGLBuffer::IndexBuffer) {
 
     refreshData();
 }
 
-void Model::initBuffers(QOpenGLFunctions* parent) {
+
+void OutlinedModel::initBuffers(QOpenGLFunctions* parent) {
     glFunc = parent;
 
     arrayBuffer.create();
     indexBuffer.create();
     vao.create();
 
+    outlineIndexBuffer.create();
+
     bindVertices();
 }
 
-void Model::refreshData() {
+void OutlinedModel::refreshData() {
     vertices.clear();
     indices.clear();
 
@@ -40,17 +42,25 @@ void Model::refreshData() {
             }
             modelFaceIndices[i] = indexMap[key];
         }
+
         int ind[] = { 0, 1, 2,
                      2, 3, 0};
 
         for (int mInd : ind) {
-            auto data = vertices[modelFaceIndices[mInd]];
+            //auto data = vertices[modelFaceIndices[mInd]];
             indices.push_back(modelFaceIndices[mInd]);
         }
+
+        int oInd[] = { 0, 1, 2, 3, 0};
+        for (int i = 0; i < 4; i++) {
+            outlineIndices.push_back(modelFaceIndices[oInd[i]]);
+            outlineIndices.push_back(modelFaceIndices[oInd[i+1]]);
+        }
     }
+    meshLoaded = true;
 }
 
-void Model::bindVertices() {
+void OutlinedModel::bindVertices() {
     if (!arrayBuffer.isCreated()) {
         qDebug("Array buffer not created");
         return;
@@ -63,6 +73,13 @@ void Model::bindVertices() {
         qDebug("Array array not created");
         return;
     }
+
+    if (!outlineIndexBuffer.isCreated()) {
+        qDebug("OIndex buffer not created");
+        return;
+    }
+
+    if (!meshLoaded) return;
     vao.bind();
 
     arrayBuffer.bind();
@@ -71,24 +88,23 @@ void Model::bindVertices() {
     indexBuffer.bind();
     indexBuffer.allocate(indices.data(), indices.size() * sizeof(GLuint));
 
-    vao.release();
-    arrayBuffer.release();
     indexBuffer.release();
+
+    outlineIndexBuffer.bind();
+    outlineIndexBuffer.allocate(outlineIndices.data(), outlineIndices.size() * sizeof(GLuint));
+
+    outlineIndexBuffer.release();
+    arrayBuffer.release();
+
+    vao.release();
+
+    verticesBound = true;
 }
 
-void Model::drawModel(QOpenGLShaderProgram *program) {
-    if (program == nullptr) program = m_program;
+void OutlinedModel::drawModel(QOpenGLShaderProgram *program) {
+    if (!verticesBound) bindVertices();
+
     program->bind();
-    /*if(!verticesBound) {
-        if (_indexCount != 0) {
-            bindVertices();
-            verticesBound = true;
-        }
-        else {
-            // worker process not finished yet
-            return;
-        }
-    }*/
 
     if (!QOpenGLContext::currentContext()) {
         qWarning() << "No current GL context when trying to draw/allocate!";
@@ -137,8 +153,17 @@ void Model::drawModel(QOpenGLShaderProgram *program) {
         qWarning() << "a_texcoord location = -1";
     }*/
 
-    // Draw cube geometry using indices from VBO 1
+    program->setUniformValue("outline", 0);
+    program->setUniformValue("objectColor", QVector4D(0.8, 0.8, 0.8, 1.0));
     glFunc->glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
-    program->release();
+    indexBuffer.release();
+
+    outlineIndexBuffer.bind();
+    program->setUniformValue("outline", 1);
+    program->setUniformValue("objectColor", QVector4D(0.3, 0.3, 0.3, 1.0));
+    glFunc->glLineWidth(1.5);
+    glFunc->glDrawElements(GL_LINES, outlineIndices.size(), GL_UNSIGNED_INT, nullptr);
     vao.release();
+    //program->setUniformValue("outline", 0);
+    program->release();
 }

@@ -21,13 +21,17 @@ BaseWindow::BaseWindow(QWidget *parent)
     //qDebug().noquote() << gen->toString();
     Mesh mesh(gen);
     ObjParser::parse(mesh);
-    Model *model = new Model(&mesh, nullptr);
+    model = new OutlinedModel(&mesh, nullptr);
 
+    setupLayout();
+}
+
+void BaseWindow::setupLayout() {
     QString axis[3] = { "X", "Y", "Z" };
 
     outerLayout = new QHBoxLayout(this);
     {
-        renderView = new View3D(this);
+        renderView = new View3D(QVector3D(25, 25, 25), gen->bounds/2, this);
         renderView->appendModel(model);
         //renderView->setFixedSize(100, 100);
         outerLayout->addWidget(renderView, 3);
@@ -38,6 +42,80 @@ BaseWindow::BaseWindow(QWidget *parent)
         parameterLayout = new QVBoxLayout(parameterPanel);
         parameterLayout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
         {
+
+            QLabel *roomLbl = new QLabel("Rooms per axis", this);
+            parameterLayout->addWidget(roomLbl);
+
+            QHBoxLayout *roomLyt = new QHBoxLayout(this);
+            roomLyt->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+
+            parameterLayout->addLayout(roomLyt);
+            {
+                for (int i = 0; i < 3; i++) {
+                    roomLyt->addWidget(new QLabel(axis[i], this));
+                    roomBoxes[i] = new QSpinBox(this);
+                    roomBoxes[i]->setMinimum(1);
+                    roomBoxes[i]->setValue(3);
+                    roomBoxes[i]->setMaximum(100);
+                    roomBoxes[i]->setAlignment(Qt::AlignCenter);
+                    roomLyt->addWidget(roomBoxes[i]);
+                    roomLyt->setStretchFactor(roomBoxes[i], 1);
+                }
+            }
+
+            parameterLayout->addSpacing(5);
+            parameterLayout->addWidget(separatorLine());
+
+            QHBoxLayout *wallPtgLyt = new QHBoxLayout(this);
+            wallPtgLyt->setAlignment(Qt::AlignTop);
+            parameterLayout->addLayout(wallPtgLyt);
+            {
+                QLabel *wallPtgLbl = new QLabel("Relative wall width", this);
+                wallPtgLyt->addWidget(wallPtgLbl);
+
+                wallPtg = new QDoubleSpinBox(this);
+                wallPtg->setValue(0.5);
+                wallPtg->setMinimum(0.01);
+                wallPtg->setMaximum(5);
+                wallPtg->setAlignment(Qt::AlignRight);
+                wallPtgLyt->addWidget(wallPtg);
+            }
+
+            parameterLayout->addSpacing(5);
+            parameterLayout->addWidget(separatorLine());
+
+            QLabel *openingsLbl = new QLabel("Openings", this);
+            parameterLayout->addWidget(openingsLbl);
+
+            entranceTable = new EntryTable(this);
+            parameterLayout->addWidget(entranceTable);
+
+            //openingList->setHorizontalHeader(new QHeaderView());
+
+            //openingListModel->setHorizontalHeaderLabels(QStringList() << "Local index" << "Facing");
+
+            entranceTable->appendData({0,0,0}, WallFacing::XNEG);
+            entranceTable->appendData({2,2,2}, WallFacing::ZPOS);
+
+            QHBoxLayout *openingLyt = new QHBoxLayout(this);
+            openingLyt->setAlignment(Qt::AlignTop);
+
+            parameterLayout->addLayout(openingLyt);
+            {
+                entryButton = new QPushButton("Add opening", this);
+                removeButton = new QPushButton("Remove", this);
+                openingLyt->addWidget(entryButton);
+                openingLyt->addWidget(removeButton);
+
+            }
+
+            generateButton = new QPushButton("Generate");
+            generateButton->setFixedHeight(40);
+            parameterLayout->addWidget(generateButton);
+
+            parameterLayout->addSpacing(5);
+            parameterLayout->addWidget(separatorLine());
+
             QLabel *sizeLbl = new QLabel("Mesh size", this);
             parameterLayout->addWidget(sizeLbl);
 
@@ -61,66 +139,9 @@ BaseWindow::BaseWindow(QWidget *parent)
                     sizeLyt->setStretchFactor(sizeBoxes[i], 1);
                 }
             }
-            parameterLayout->addSpacing(10);
-            parameterLayout->addWidget(separatorLine());
 
-            QLabel *roomLbl = new QLabel("Rooms per axis", this);
-            parameterLayout->addWidget(roomLbl);
-
-            QHBoxLayout *roomLyt = new QHBoxLayout(this);
-            roomLyt->setAlignment(Qt::AlignLeft | Qt::AlignTop);
-
-            parameterLayout->addLayout(roomLyt);
-            {
-                for (int i = 0; i < 3; i++) {
-                    roomLyt->addWidget(new QLabel(axis[i], this));
-                    roomBoxes[i] = new QSpinBox(this);
-                    roomBoxes[i]->setMinimum(1);
-                    roomBoxes[i]->setValue(3);
-                    roomBoxes[i]->setMaximum(100);
-                    roomBoxes[i]->setAlignment(Qt::AlignCenter);
-                    roomLyt->addWidget(roomBoxes[i]);
-                    roomLyt->setStretchFactor(roomBoxes[i], 1);
-                }
-            }
-
-            parameterLayout->addSpacing(10);
-            parameterLayout->addWidget(separatorLine());
-
-            QHBoxLayout *wallPtgLyt = new QHBoxLayout(this);
-            wallPtgLyt->setAlignment(Qt::AlignTop);
-            parameterLayout->addLayout(wallPtgLyt);
-            {
-                QLabel *wallPtgLbl = new QLabel("Relative wall width", this);
-                wallPtgLyt->addWidget(wallPtgLbl);
-
-                wallPtg = new QDoubleSpinBox(this);
-                wallPtg->setValue(0.5);
-                wallPtg->setMinimum(0.01);
-                wallPtg->setMaximum(5);
-                wallPtg->setAlignment(Qt::AlignRight);
-                wallPtgLyt->addWidget(wallPtg);
-            }
-
-            parameterLayout->addSpacing(10);
-            parameterLayout->addWidget(separatorLine());
-
-            QLabel *openingsLbl = new QLabel("Openings", this);
-            parameterLayout->addWidget(openingsLbl);
-
-            entranceTable = new EntryTable();
-            parameterLayout->addWidget(entranceTable);
-
-            //openingList->setHorizontalHeader(new QHeaderView());
-
-            //openingListModel->setHorizontalHeaderLabels(QStringList() << "Local index" << "Facing");
-
-            entranceTable->model()->appendData({0,0,0}, WallFacing::XNEG);
-            entranceTable->model()->appendData({2,2,2}, WallFacing::ZPOS);
-
-            QHBoxLayout *openingLyt = new QHBoxLayout(this);
-            openingLyt->setAlignment(Qt::AlignTop);
-
+            exportButton = new QPushButton("Export as", this);
+            parameterLayout->addWidget(exportButton);
         }
     }
 }

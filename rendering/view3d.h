@@ -23,7 +23,7 @@ class View3D : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
 public:
-    View3D(QWidget *parent = nullptr);
+    View3D(QVector3D cameraPos, QVector3D cameraCentre, QWidget *parent = nullptr);
     void initShaders();
     void appendModel(Model* model);
     //void drawModel();

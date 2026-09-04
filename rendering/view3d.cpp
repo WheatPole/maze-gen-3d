@@ -1,12 +1,12 @@
 #include "view3d.h"
 
-View3D::View3D(QWidget *parent)
+View3D::View3D(QVector3D cameraPos, QVector3D cameraCentre, QWidget *parent)
     : QOpenGLWidget{parent}
 {
     setFocusPolicy(Qt::StrongFocus);
     this->setMinimumSize(500, 500);
 
-    camera = new Camera(2.5, QVector3D(50.0, 50.0, 50.0), QVector3D(0, 0, 0), this);
+    camera = new Camera(2.5, cameraPos, cameraCentre, true, this);
 
     updateTimer.start(16, this);
 }
@@ -111,7 +111,6 @@ void View3D::initShaders() {
         qDebug() << program.log();
         close();
     }
-    program.setUniformValue("sampleColor", QVector4D(0.4, 0.9, 0.2, 1.0));
     program.setUniformValue("lightColor", QVector4D(1.0, 1.0, 1.0, 1.0));
     program.setUniformValue("lightPos", QVector4D(camera->position(), 1.0));
     program.release();

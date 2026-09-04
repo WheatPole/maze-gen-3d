@@ -1,23 +1,20 @@
 #include "camera.h"
 
-Camera::Camera(qreal cameraSpeed, QVector3D cameraPos, QVector3D cameraTarget, QOpenGLWidget *parent)
-    : QObject(parent) , _cameraSpeed(cameraSpeed), _cameraPos(cameraPos), _cameraTarget(cameraTarget), screen(parent)
+Camera::Camera(qreal cameraSpeed, QVector3D cameraPos, QVector3D cameraTarget, bool movable, QOpenGLWidget *parent)
+    : QObject(parent) , _cameraSpeed(cameraSpeed), _cameraPos(cameraPos), _cameraTarget(cameraTarget), allowMovement(movable), screen(parent)
 {
 
     maxCameraSpeed = cameraSpeed;
     minCameraSpeed = 0.1;
     screen->installEventFilter(this);
 
-    QVector3D camToTarget = (_cameraTarget - _cameraPos).normalized();
+    staticDistance = (_cameraTarget - _cameraPos).length();
 
+    QVector3D camToTarget = (_cameraTarget - _cameraPos).normalized();
     _yaw = qRadiansToDegrees(atan2(camToTarget.x(), camToTarget.z()));
     _pitch = -qRadiansToDegrees(asin(-camToTarget.y()));
-    qDebug() << camToTarget << _yaw << _pitch;
-    QVector3D direction;
-    direction.setX(cos(qDegreesToRadians(_yaw)) * cos(qDegreesToRadians(_pitch)));
-    direction.setY(sin(qDegreesToRadians(_pitch)));
-    direction.setZ(sin(qDegreesToRadians(_yaw)) * cos(qDegreesToRadians(_pitch)));
-    _cameraFront = direction.normalized();
+
+    _cameraFront = calcCameraFront();
 }
 
 QMatrix4x4 Camera::getView() {
@@ -27,29 +24,25 @@ QMatrix4x4 Camera::getView() {
 }
 
 bool Camera::update() {
-    //qDebug() << _cameraPos << " looking at " << _cameraTarget;
     bool changed = false;
-    if (movement[Direction::Forward]) {
-        //_cameraPos += _cameraSpeed * _cameraFront; changed = true;
-        QVector3D delta = _cameraSpeed * _cameraFront; delta.setY(0); _cameraPos += delta.normalized(); changed = true;
-    }
-    if (movement[Direction::Backward]) {
-        //_cameraPos -= _cameraSpeed * _cameraFront; changed = true;
-        QVector3D delta = _cameraSpeed * _cameraFront; delta.setY(0); _cameraPos -= delta.normalized(); changed = true;
-    }
-    if (movement[Direction::Left]) {
-        //_cameraPos -= (QVector3D::crossProduct(_cameraFront, _cameraUp)).normalized() * _cameraSpeed; changed = true;
-        QVector3D delta = (QVector3D::crossProduct(_cameraFront, _cameraUp)).normalized() * _cameraSpeed; delta.setY(0); _cameraPos -= delta.normalized(); changed = true;
-    }
-    if (movement[Direction::Right]) {
-        //_cameraPos += (QVector3D::crossProduct(_cameraFront, _cameraUp)).normalized() * _cameraSpeed; changed = true;
-        QVector3D delta = (QVector3D::crossProduct(_cameraFront, _cameraUp)).normalized() * _cameraSpeed; delta.setY(0); _cameraPos += delta.normalized(); changed = true;
-    }
-    if (movement[Direction::Up]) {
-        _cameraPos += _cameraUp * _cameraSpeed; changed = true;
-    }
-    if (movement[Direction::Down]) {
-        _cameraPos -= _cameraUp * _cameraSpeed; changed = true;
+    if (allowMovement) {
+        if (movement[Direction::Forward]) {
+            QVector3D delta = _cameraSpeed * _cameraFront; delta.setY(0); _cameraPos += delta.normalized(); changed = true;
+        }
+        if (movement[Direction::Backward]) {
+            QVector3D delta = _cameraSpeed * _cameraFront; delta.setY(0); _cameraPos -= delta.normalized(); changed = true;
+        }
+        if (movement[Direction::Left]) {
+            QVector3D delta = (QVector3D::crossProduct(_cameraFront, _cameraUp)).normalized() * _cameraSpeed; delta.setY(0); _cameraPos -= delta.normalized(); changed = true;    }
+        if (movement[Direction::Right]) {
+            QVector3D delta = (QVector3D::crossProduct(_cameraFront, _cameraUp)).normalized() * _cameraSpeed; delta.setY(0); _cameraPos += delta.normalized(); changed = true;
+        }
+        if (movement[Direction::Up]) {
+            _cameraPos += _cameraUp * _cameraSpeed; changed = true;
+        }
+        if (movement[Direction::Down]) {
+            _cameraPos -= _cameraUp * _cameraSpeed; changed = true;
+        }
     }
     //if (changed) qDebug() << "cam pos" << _cameraPos;
     if (changed) {
@@ -138,21 +131,25 @@ bool Camera::eventFilter(QObject* object, QEvent* event) {
 
         float sensitivity = 0.2f;
         offset *= sensitivity;
-qDebug() << _yaw << _pitch;
 
-        _yaw += -offset.x();
-        _pitch += offset.y();
+        QVector3D camCentre = _cameraPos + calcCameraFront() * staticDistance;
+
+        _yaw -= -offset.x();
+        _pitch -= offset.y();
 
         if(_pitch > 89.0f)
             _pitch = 89.0f;
         if(_pitch < -89.0f)
             _pitch = -89.0f;
-qDebug() << _yaw << _pitch;
-        QVector3D direction;
-        direction.setX(cos(qDegreesToRadians(_yaw)) * cos(qDegreesToRadians(_pitch)));
-        direction.setY(sin(qDegreesToRadians(_pitch)));
-        direction.setZ(sin(qDegreesToRadians(_yaw)) * cos(qDegreesToRadians(_pitch)));
-        _cameraFront = direction.normalized();
+
+        QVector3D eulerVector = calcCameraFront();
+        _cameraFront = eulerVector;
+
+
+        // Third person view addition
+
+        eulerVector *= staticDistance;
+        _cameraPos = camCentre - eulerVector;
     }
     return false;
 }

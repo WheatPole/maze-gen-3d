@@ -14,9 +14,11 @@ bool EntryTableModel::insertData(int row, triplet<int> lIndex, WallFacing facing
 }
 
 bool EntryTableModel::appendData(triplet<int> lIndex, WallFacing facing) {
+    beginInsertRows(QModelIndex(), rowData.size(), rowData.size());
     rowData.push_back({lIndex, facing});
+    endInsertRows();
 
-    emit dataChanged(index(0, 0), index(rowCount()-1, columnCount()-1));
+    //emit dataChanged(index(0, 0), index(rowCount()-1, columnCount()-1));
     return true;
 }
 
@@ -26,18 +28,18 @@ EntryTableModel::RowItem EntryTableModel::eraseData(int row) {
         return rowData[0];
     }
     RowItem data = rowData[row];
+    beginRemoveRows(QModelIndex(), rowData.size(), rowData.size());
     rowData.erase(rowData.begin()+row);
+    endRemoveRows();
 
-    emit dataChanged(index(0, 0), index(rowCount()-1, columnCount()-1));
+    //emit dataChanged(index(0, 0), index(rowCount()-1, columnCount()-1));
     return data;
 }
 
 QVariant EntryTableModel::data(const QModelIndex &index, int role) const {
     if (!index.isValid())
         return {};
-
     if (role == Qt::DisplayRole) {
-        qDebug() << "Display role: " << index.row() << index.column();
         if (index.column() < 0 || index.column() >= columnCount()) return {};
         if (index.row() < 0 || index.column() >= rowCount()) return {};
         switch (index.column()) {
