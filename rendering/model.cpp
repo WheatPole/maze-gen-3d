@@ -1,7 +1,7 @@
 #include "model.h"
 
-Model::Model(Mesh *data, QObject *parent)
-    : mesh(data),
+Model::Model(std::unique_ptr<Mesh> data, QObject *parent)
+    : mesh(std::move(data)),
     indexBuffer(QOpenGLBuffer::IndexBuffer),
     arrayBuffer(QOpenGLBuffer::VertexBuffer), QObject{parent} {
 

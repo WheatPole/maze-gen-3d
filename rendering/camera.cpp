@@ -121,6 +121,15 @@ bool Camera::eventFilter(QObject* object, QEvent* event) {
     else if (event->type() == QEvent::MouseButtonRelease) {
         mouseDown = false;
     }
+    else if (event->type() == QEvent::Wheel) {
+        QWheelEvent* wheelEvent = static_cast<QWheelEvent*>(event);
+        if (wheelEvent->angleDelta().y() != 0) {
+            double angle = wheelEvent->angleDelta().y();
+            double factor = qPow(zoomBase, angle);
+            changeCameraDistance(staticDistance / factor);
+            emit cameraPositionChanged(_cameraPos);
+        }
+    }
     else if (event->type() == QEvent::MouseMove) {
         // will be executed only if it's held
         QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
@@ -152,4 +161,10 @@ bool Camera::eventFilter(QObject* object, QEvent* event) {
         _cameraPos = camCentre - eulerVector;
     }
     return false;
+}
+
+void Camera::changeCameraDistance(qreal newDistance) {
+    QVector3D eulerVector = calcCameraFront();
+    QVector3D camCentre = _cameraPos + eulerVector * staticDistance;
+    _cameraPos = camCentre - eulerVector * (staticDistance = newDistance);
 }

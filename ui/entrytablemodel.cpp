@@ -41,7 +41,8 @@ QVariant EntryTableModel::data(const QModelIndex &index, int role) const {
         return {};
     if (role == Qt::DisplayRole) {
         if (index.column() < 0 || index.column() >= columnCount()) return {};
-        if (index.row() < 0 || index.column() >= rowCount()) return {};
+        if (index.row() < 0 || index.row() >= rowCount()) return {};
+
         switch (index.column()) {
         case 0: return QString::number(index.row()+1);
         case 1: return QString::fromStdString(rowData[index.row()].localIndex.toString());

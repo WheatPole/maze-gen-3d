@@ -26,6 +26,14 @@ public:
     View3D(QVector3D cameraPos, QVector3D cameraCentre, QWidget *parent = nullptr);
     void initShaders();
     void appendModel(Model* model);
+    inline void updateBuffers() {
+        makeCurrent();
+        for (auto model : modelList) {
+            model->bindVertices();
+        }
+        doneCurrent();
+        update();
+    }
     //void drawModel();
     ~View3D();
     void initializeGL() override;
@@ -38,6 +46,7 @@ public:
     }
     void logMessage(const QOpenGLDebugMessage &message);
     void logMessages();
+    QList<Model*> modelList;
 signals:
     void needsRequesting(QPointF position);
 private:
@@ -45,7 +54,6 @@ private:
     //Terrain *terrain = nullptr;
 
     Camera *camera;
-    QList<Model*> modelList;
 
     int verticesSize = 0;
     int indicesSize = 0;

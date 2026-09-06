@@ -21,25 +21,41 @@ Generator::Generator(QVector3D _origin, triplet<int> _mazeDims, QVector3D _bound
         for (int z = 0; z < zDim; z++) {
             for (int x = 0; x < xDim; x++) {
                 tileArray[absoluteIndex(y, z, x)] = new Tile(QVector3D(x, y, z) * (tileSize + tileSize * wallPtg),
-                            tileSize, triplet<int>(x, y, z), mazeDims, wallPtg);
+                                                             tileSize, triplet<int>(x, y, z), mazeDims, wallPtg);
                 //tileArray[y][z][x].setWall((byte)63);
             }
         }
     }
 }
 
-// Index arrays must follow the following format: [x,y,z]
-void Generator::generateWalls(triplet<int> startIndices, WallFacing entryFace, triplet<int> finishIndices, WallFacing exitFace) {
+void Generator::updateTileArray() {
     int xDim = mazeDims.x;
     int yDim = mazeDims.y;
     int zDim = mazeDims.z;
-    Tile* startTile = tileArray[absoluteIndex(startIndices.y, startIndices.z, startIndices.x)];
-    Tile* finishTile = tileArray[absoluteIndex(finishIndices.y, finishIndices.z, finishIndices.x)];
 
-    if (!entryValidity(startTile, entryFace, finishTile, exitFace)) {
-        //System.out.println("Invalid initial facing values during generation");
-        return;
+    if (tileArray.size() != xDim * yDim * zDim) {
+        tileArray = std::vector<Tile*>(xDim * yDim * zDim);
     }
+
+    for (int y = 0; y < yDim; y++) {
+        for (int z = 0; z < zDim; z++) {
+            for (int x = 0; x < xDim; x++) {
+                Wall wall(63);
+                if (tileArray[absoluteIndex(y, z, x)] != nullptr)
+                    wall = tileArray[absoluteIndex(y, z, x)]->wall;
+                tileArray[absoluteIndex(y, z, x)] = new Tile(QVector3D(x, y, z) * (tileSize + tileSize * wallPtg),
+                                                             tileSize, triplet<int>(x, y, z), mazeDims, wallPtg);
+                if (tileArray[absoluteIndex(y, z, x)] != nullptr)
+                    tileArray[absoluteIndex(y, z, x)]->wall = wall;
+            }
+        }
+    }
+}
+
+void Generator::refreshWalls() {
+    int xDim = mazeDims.x;
+    int yDim = mazeDims.y;
+    int zDim = mazeDims.z;
 
     // Refresh walls
     for (int y = 0; y < yDim; y++) {
@@ -49,23 +65,44 @@ void Generator::generateWalls(triplet<int> startIndices, WallFacing entryFace, t
             }
         }
     }
-
-    // Begins the generation
-    kruskal(startIndices, entryFace, finishIndices);
-    //randomIndexFilling(startIndices, entryFace, finishIndices);
-    //propagate(startIndices, entryFace, finishIndices);
-    finishTile->wall.remove(exitFace);
 }
 
-bool Generator::entryValidity(Tile* entryTile, WallFacing entryFace, Tile* exitTile, WallFacing exitFace) {
-    QVector3D entranceFaceOffset = entryFace.getNormal() / 100;
-    QVector3D exitFaceOffset = exitFace.getNormal() / 100;
+void Generator::generateWalls() {
+    refreshWalls();
+    // Kruskal maze generation algorithm
+    kruskal();
+    applyOpenings();
 
-    QVector3D startVec(entryTile->position), finishVec(exitTile->position);
+}
+
+void Generator::applyOpenings() {
+    for (IndexFacing opening : openings) {
+        auto index = opening.index;
+        tileArray[absoluteIndex(index.y, index.z, index.x)]->wall.remove(opening.facing);
+    }
+}
+
+void Generator::addOpening(triplet<int> index, WallFacing face) {
+    if (!valid(index.y, index.z, index.x) || !entryValidity(tileArray[absoluteIndex(index.y, index.z, index.x)], face)) {
+        qDebug() << "Invalid opening indices" << index.toString() << face.toString();
+        return;
+    }
+    openings.push_back({index, face});
+    tileArray[absoluteIndex(index.y, index.z, index.x)]->wall.remove(face);
+}
+
+void Generator::eraseOpening(int ind) {
+    auto index = openings[ind].index;
+    tileArray[absoluteIndex(index.y, index.z, index.x)]->wall.add(openings[ind].facing);
+    openings.erase(openings.begin()+ind);
+}
+
+bool Generator::entryValidity(Tile* entryTile, WallFacing entryFace) {
+    QVector3D entranceFaceOffset = entryFace.getNormal() / 100;
+
+    QVector3D startVec(entryTile->position);
     startVec = startVec + entranceFaceOffset;
-    finishVec = finishVec + exitFaceOffset;
-    QVector3D startOffVec = startVec + tileSize + tileSize * (2 * wallPtg),
-        finishOffVec = finishVec + tileSize + tileSize * (2 * wallPtg);
+    QVector3D offVec = startVec + tileSize + tileSize * (2 * wallPtg);
 
     auto isInside = [](QVector3D bounds1, QVector3D vec, QVector3D pivot = QVector3D(0, 0, 0)) {
         bool valX = (vec.x() >= pivot.x() && vec.x() <= (pivot.x() + bounds1.x()));
@@ -75,16 +112,12 @@ bool Generator::entryValidity(Tile* entryTile, WallFacing entryFace, Tile* exitT
         return valX && valY && valZ;
     };
 
-    bool outS1 = !isInside(bounds, startVec), outS2 = !isInside(bounds, startOffVec);
-    bool outF1 = !isInside(bounds, finishVec), outF2 = !isInside(bounds, finishOffVec);
+    bool outS1 = !isInside(bounds, startVec), outS2 = !isInside(bounds, offVec);
     // Both vectors need to be outside, so that the facings are actually facing outside
-    return (outS1 || outS2) && (outF1 || outF2);
+    return outS1 || outS2;
 }
 
-void Generator::kruskal(triplet<int> currentInd, WallFacing entryFace, triplet<int> goalInd) {
-    int y1 = currentInd.y, z1 = currentInd.z, x1 = currentInd.x;
-    //buffer = new boolean[mazeDims.y][mazeDims.z][mazeDims.x];
-    tileArray[absoluteIndex(y1,z1,x1)]->wall.remove(entryFace);
+void Generator::kruskal() {
 
     // needs hashing
     struct WallData {
@@ -149,4 +182,24 @@ void Generator::kruskal(triplet<int> currentInd, WallFacing entryFace, triplet<i
             // probabilistic loops?
         }
     }
+}
+
+
+void Generator::setDims(triplet<int> newDims) {
+    for (IndexFacing& opening : openings) {
+        triplet<int> &ind = opening.index;
+        if (ind.x == mazeDims.x-1 && mazeDims.x < newDims.x) {
+            ind.x = newDims.x-1;
+        }
+        if (ind.y == mazeDims.y-1 && mazeDims.y < newDims.y) {
+            ind.y = newDims.y-1;
+        }
+        if (ind.z == mazeDims.z-1 && mazeDims.z < newDims.z) {
+            ind.z = newDims.z-1;
+        }
+    }
+
+    mazeDims = newDims;
+
+    applyOpenings();
 }

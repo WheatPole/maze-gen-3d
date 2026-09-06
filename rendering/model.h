@@ -14,12 +14,13 @@ class Model : public QObject
 {
     Q_OBJECT
 public:
-    Model(Mesh *data, QObject *parent = nullptr);
+    Model(std::unique_ptr<Mesh> data, QObject *parent = nullptr);
     virtual void initBuffers(QOpenGLFunctions *parent);
     virtual void refreshData();
     virtual void bindVertices();
     virtual void drawModel(QOpenGLShaderProgram *program );
 
+    std::unique_ptr<Mesh> mesh;
 protected:
     struct VertexData
     {
@@ -45,8 +46,6 @@ protected:
             return h;
         }
     };
-
-    Mesh *mesh;
 
     QOpenGLBuffer arrayBuffer, indexBuffer;
     QOpenGLVertexArrayObject vao;

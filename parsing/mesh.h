@@ -25,18 +25,6 @@ private:
     int maxSize, m_size;
 
 public:
-    // INNER - vertices used for inner walls
-    // OUTER - vertices used for outer walls
-    // EXTRA - additional vertices for constructing wall entrances
-    /*enum class VertexClass {
-        INNER, OUTER
-    };*/
-
-    /*static size_t qHash(const QVector3D &key, size_t seed = 0) noexcept {
-        return qHashMulti(seed, key.x(), key.y(), key.z());
-    }*/
-
-    triplet<int> mazeDims;
     Generator *generator;
     std::vector<VertexBox*> vBoxList;
     std::vector<QVector3D> vertices;
@@ -60,6 +48,19 @@ public:
     std::vector<Face*> faces;
 
     Mesh(Generator *generator);
+
+    inline void refresh() {
+        vertexHash.clear();
+
+        faces.clear();
+        vertices.clear();
+
+        m_size = 0;
+        fillInnerVertices();
+        fillOuterVertices();
+    }
+
+    void updateVbox();
 
 private:
     void fillInnerVertices();

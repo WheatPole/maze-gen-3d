@@ -15,6 +15,15 @@ struct triplet {
         else
             return *this;
     }
+    inline void setX(T val) {
+        x = val;
+    }
+    inline void setY(T val) {
+        y = val;
+    }
+    inline void setZ(T val) {
+        z = val;
+    }
     bool operator ==(const triplet<T> &trip) const {
         return (x == trip.x) && (y == trip.y) && (z == trip.z);
     }

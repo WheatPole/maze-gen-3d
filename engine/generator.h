@@ -2,8 +2,17 @@
 #define GENERATOR_H
 
 #include "tile.h"
+#include <QObject>
 
-class Generator {
+class Generator : public QObject {
+    Q_OBJECT
+
+    struct IndexFacing {
+        triplet<int> index;
+        WallFacing facing;
+        IndexFacing(triplet<int> _index, WallFacing _facing) : index(_index), facing(_facing) {}
+    };
+
 public:
     // Origin - the bottom corner from which the generator will build
     QVector3D origin;
@@ -11,14 +20,18 @@ public:
     QVector3D bounds;
     // Plain tile size, without walls
     QVector3D tileSize;
+    // Outer-wall openings
+    std::vector<IndexFacing> openings;
     // Order of axes - Y, Z, X, all tiles start with walls on all sides
     // Z -> up/down, X -> left/right
     std::vector<Tile*> tileArray;
+
     bool*** buffer;
     double wallPtg;
     // todo? add an additional parameter for floor (box) height
 
     Generator(QVector3D _origin, triplet<int> _mazeDims, QVector3D _bounds, double wallPercentage);
+    void updateTileArray();
 
     inline double wallWidth(WallFacing dir) const {
         if (dir == WallFacing::XNEG || dir == WallFacing::XPOS) {
@@ -38,12 +51,15 @@ public:
         return y * mazeDims.x * mazeDims.z + z * mazeDims.x + x;
     }
 
-    // Index arrays must follow the following format: [x, y, z]
-    void generateWalls(triplet<int> startIndices, WallFacing entryFace, triplet<int> finishIndices, WallFacing exitFace);
+    void refreshWalls();
+    void generateWalls();
 
-    bool entryValidity(Tile* entryTile, WallFacing entryFace, Tile* exitTile, WallFacing exitFace);
+    void addOpening(triplet<int> index, WallFacing face);
+    void eraseOpening(int index);
+    void applyOpenings();
+    bool entryValidity(Tile* entryTile, WallFacing entryFace);
 
-    void kruskal(triplet<int> currentInd, WallFacing entryFace, triplet<int> goalInd);
+    void kruskal();
 
     inline int random(int min, int max) {
         //System.out.println(min + " " + max);
@@ -78,5 +94,16 @@ public:
         }
         return res;
     }
+    void setDims(triplet<int> newDims);
+    inline void setBounds(QVector3D newBounds) {
+        bounds = newBounds;
+    }
+    inline void setWallPtg(double val) {
+        wallPtg = val;
+    }
+
+signals:
+    // implement
+    void openingChanged(int ind);
 };
 #endif // GENERATOR_H

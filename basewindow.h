@@ -43,5 +43,12 @@ private:
     View3D *renderView;
 
     void setupLayout();
+    void setupConnections();
+
+    inline void refreshView() {
+        model->mesh->refresh();
+        model->refreshData();
+        renderView->updateBuffers();
+    }
 };
 #endif // BASEWINDOW_H

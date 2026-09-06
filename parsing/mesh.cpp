@@ -1,23 +1,32 @@
 #include "mesh.h"
 #include <QDebug>
 
-Mesh::Mesh(Generator *_generator) : generator(_generator), mazeDims(_generator->mazeDims) {
+Mesh::Mesh(Generator *_generator) : generator(_generator) {
     // Premise is to construct vertices tile by tile, and for each tile,
     // we generate vertices for the following:
     // - Outer walls (only if next to the edge, with wall padding)
     // - Inner walls (without wall padding)
     // because this is essentially minimal data needed to properly construct the maze
-
+    auto mazeDims = generator->mazeDims;
     vBoxList = std::vector<VertexBox*>(mazeDims.y * mazeDims.z * mazeDims.x);
 
     m_size = 0;
     // 4 * 2 for opening (change to 4 * n when added functionality)
     maxSize = (mazeDims.x+1) * (mazeDims.z+1) * 2
-                + (mazeDims.x+1) * (mazeDims.y+1) * 2
-                + (mazeDims.z+1) * (mazeDims.y+1) * 2
-                //- 2 * (mazeDims.x + mazeDims.y + mazeDims.z)
-                + 4 * 2;
+              + (mazeDims.x+1) * (mazeDims.y+1) * 2
+              + (mazeDims.z+1) * (mazeDims.y+1) * 2
+              //- 2 * (mazeDims.x + mazeDims.y + mazeDims.z)
+              + 4 * 2;
+    updateVbox();
 
+    refresh();
+}
+
+void Mesh::updateVbox() {
+    auto mazeDims = generator->mazeDims;
+    if (vBoxList.size() != mazeDims.y * mazeDims.z * mazeDims.x) {
+        vBoxList.resize(mazeDims.y * mazeDims.z * mazeDims.x);
+    }
     // Traverse order: Y, Z, X
     for (int y = 0; y < mazeDims.y; y++) {
         for (int z = 0; z < mazeDims.z; z++) {
@@ -29,10 +38,6 @@ Mesh::Mesh(Generator *_generator) : generator(_generator), mazeDims(_generator->
             }
         }
     }
-
-    faces.clear();
-    fillInnerVertices();
-    fillOuterVertices();
 }
 
 // Orients the vertices such that the normal becomes <normal>
@@ -75,8 +80,7 @@ std::array<QVector3D, 4> orient(std::array<QVector3D, 4> vertices, QVector3D nor
 
 void Mesh::fillInnerVertices() {
     // Wall facing vertex append order: XNEG, XPOS, ZNEG, ZPOS, YNEG, YPOS
-    // TODO: if full wall dont draw
-
+    auto mazeDims = generator->mazeDims;
     // Inner faces
     for (int y = 0; y < mazeDims.y; y++) {
         for (int z = 0; z < mazeDims.z; z++) {
@@ -148,7 +152,7 @@ void Mesh::fillInnerVertices() {
 
 void Mesh::fillOuterVertices() {
     // Wall facing vertex append order: XNEG, XPOS, ZNEG, ZPOS, YNEG, YPOS
-
+    auto mazeDims = generator->mazeDims;
     for (int y = 0; y < mazeDims.y; y++) {
         for (int z = 0; z < mazeDims.z; z++) {
             for (int x = 0; x < mazeDims.x; x++) {

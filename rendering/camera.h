@@ -84,6 +84,9 @@ private:
     double staticDistance;
     qreal maxCameraSpeed = 1;
     qreal minCameraSpeed = 0;
+    qreal zoomBase = 1.0008;
+
+    void changeCameraDistance(qreal newDistance);
     //QMap<int, bool> keys;
 };
 

@@ -15,15 +15,16 @@ BaseWindow::BaseWindow(QWidget *parent)
     this->setMinimumSize(600, 600);
 
     gen = new Generator(QVector3D(0, 0, 0), triplet<int>(3,3,3), QVector3D(10, 10, 10), 0.5);
-    gen->generateWalls(triplet<int>{0, 0, 0}, WallFacing::XNEG, triplet<int> {2,2,2}, WallFacing::ZPOS);
+    gen->addOpening({0, 1, 1}, WallFacing::XNEG);
+    gen->addOpening({2,1,1}, WallFacing::XPOS);
+    gen->generateWalls();
 
     qDebug() << "Finished generating!";
     //qDebug().noquote() << gen->toString();
-    Mesh mesh(gen);
-    ObjParser::parse(mesh);
-    model = new OutlinedModel(&mesh, nullptr);
-
+    std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>(gen);
+    model = new OutlinedModel(std::move(mesh), nullptr);
     setupLayout();
+    setupConnections();
 }
 
 void BaseWindow::setupLayout() {
@@ -38,7 +39,6 @@ void BaseWindow::setupLayout() {
 
         QFrame *parameterPanel = new QFrame(this);
         outerLayout->addWidget(parameterPanel, 1);
-
         parameterLayout = new QVBoxLayout(parameterPanel);
         parameterLayout->setAlignment(Qt::AlignLeft | Qt::AlignTop);
         {
@@ -77,6 +77,7 @@ void BaseWindow::setupLayout() {
                 wallPtg->setValue(0.5);
                 wallPtg->setMinimum(0.01);
                 wallPtg->setMaximum(5);
+                wallPtg->setSingleStep(0.05);
                 wallPtg->setAlignment(Qt::AlignRight);
                 wallPtgLyt->addWidget(wallPtg);
             }
@@ -94,8 +95,8 @@ void BaseWindow::setupLayout() {
 
             //openingListModel->setHorizontalHeaderLabels(QStringList() << "Local index" << "Facing");
 
-            entranceTable->appendData({0,0,0}, WallFacing::XNEG);
-            entranceTable->appendData({2,2,2}, WallFacing::ZPOS);
+            entranceTable->appendData({0,1,1}, WallFacing::XNEG);
+            entranceTable->appendData({2,1,1}, WallFacing::XPOS);
 
             QHBoxLayout *openingLyt = new QHBoxLayout(this);
             openingLyt->setAlignment(Qt::AlignTop);
@@ -144,6 +145,45 @@ void BaseWindow::setupLayout() {
             parameterLayout->addWidget(exportButton);
         }
     }
+}
+
+void BaseWindow::setupConnections() {
+    QObject::connect(generateButton, &QPushButton::clicked, [&]() {
+        gen->generateWalls();
+        refreshView();
+    });
+// TODO: not change global size
+    QObject::connect(wallPtg, &QDoubleSpinBox::valueChanged, [&](double val) {
+        gen->setWallPtg(val);
+        gen->updateTileArray();
+        model->mesh->updateVbox();
+        refreshView();
+    });
+    QObject::connect(roomBoxes[0], &QSpinBox::valueChanged, [&](int val) {
+        auto newDims = gen->mazeDims;
+        newDims.setX(val);
+        gen->setDims(newDims);
+        gen->updateTileArray();
+        model->mesh->updateVbox();
+        refreshView();
+    });
+    QObject::connect(roomBoxes[1], &QSpinBox::valueChanged, [&](int val) {
+        auto newDims = gen->mazeDims;
+        newDims.setY(val);
+        gen->setDims(newDims);
+        gen->updateTileArray();
+        model->mesh->updateVbox();
+        refreshView();
+    });
+    QObject::connect(roomBoxes[2], &QSpinBox::valueChanged, [&](int val) {
+        auto newDims = gen->mazeDims;
+        newDims.setZ(val);
+        gen->setDims(newDims);
+        gen->updateTileArray();
+        model->mesh->updateVbox();
+        refreshView();
+    });
+    //QObject::connect()
 }
 
 BaseWindow::~BaseWindow() = default;

@@ -1,7 +1,7 @@
 #include "outlinedmodel.h"
 
-OutlinedModel::OutlinedModel(Mesh* data, QObject *parent)
-    : Model(data, parent),
+OutlinedModel::OutlinedModel(std::unique_ptr<Mesh> data, QObject *parent)
+    : Model(std::move(data), parent),
     outlineIndexBuffer(QOpenGLBuffer::IndexBuffer) {
 
     refreshData();
@@ -23,8 +23,10 @@ void OutlinedModel::initBuffers(QOpenGLFunctions* parent) {
 void OutlinedModel::refreshData() {
     vertices.clear();
     indices.clear();
+    outlineIndices.clear();
 
     std::unordered_map<VertexKey, int, VertexHash> indexMap;
+    indexMap.clear();
     for (Face* face : mesh->faces) {
         // Transcribed indices to model data
         std::array<int, 4> modelFaceIndices;

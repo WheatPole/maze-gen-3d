@@ -9,13 +9,11 @@ class OutlinedModel : public Model
 {
     Q_OBJECT
 public:
-    explicit OutlinedModel(Mesh *data, QObject *parent = nullptr);
+    explicit OutlinedModel(std::unique_ptr<Mesh> data, QObject *parent = nullptr);
     void initBuffers(QOpenGLFunctions *parent) override;
     void refreshData() override;
     void bindVertices() override;
     void drawModel(QOpenGLShaderProgram *program ) override;
-
-signals:
 
 private:
 

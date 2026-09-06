@@ -8,6 +8,10 @@ View3D::View3D(QVector3D cameraPos, QVector3D cameraCentre, QWidget *parent)
 
     camera = new Camera(2.5, cameraPos, cameraCentre, true, this);
 
+    QObject::connect(camera, &Camera::cameraPositionChanged, [&] (QVector3D cameraPos) {
+        this->update();
+    });
+
     updateTimer.start(16, this);
 }
 
@@ -15,12 +19,10 @@ View3D::View3D(QVector3D cameraPos, QVector3D cameraCentre, QWidget *parent)
 void View3D::initializeGL()
 {
     initializeOpenGLFunctions();
-
     logger = new QOpenGLDebugLogger(this);
     logger->initialize();
     QObject::connect(logger, &QOpenGLDebugLogger::messageLogged, this, &View3D::logMessage);
     logger->startLogging();
-
     glClearColor(0.3, 0.3, 0.3, 1);
 
     // Enable depth buffer
@@ -36,7 +38,6 @@ void View3D::initializeGL()
     program.setUniformValue("projection", projection);
     program.setUniformValue("model", QMatrix4x4());
     program.release();
-
     for (Model *model : modelList) {
         model->initBuffers(this);
     }
@@ -57,7 +58,7 @@ void View3D::paintGL()
     program.setUniformValue("projection", projection);
 
     //program.setUniformValue("mvp_matrix", projection * view);
-    for (auto* model : modelList) {
+    for (Model *model : modelList) {
         model->drawModel(&program);
     }
 
@@ -123,6 +124,9 @@ void View3D::appendModel(Model *model) {
         model->initBuffers(this);
         doneCurrent();
     }
+    else {
+        qDebug() << "Context not yet initialized";
+    }
 }
 
 void View3D::timerEvent(QTimerEvent *event)
@@ -150,9 +154,6 @@ void View3D::logMessages() {
 
 View3D::~View3D() {
     makeCurrent();
-    for (int i = 0; i < modelList.size(); i++) {
-        delete modelList[i];
-    }
     delete camera;
     doneCurrent();
 }
