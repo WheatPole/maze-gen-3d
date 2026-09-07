@@ -1,9 +1,9 @@
 #include "entrytable.h"
 #include <QResizeEvent>
 
-EntryTable::EntryTable(QWidget *parent)
+EntryTable::EntryTable(std::vector<EntryTableModel::RowItem> *data, QWidget *parent)
     : QTableView(parent) {
-    m_model = new EntryTableModel(this);
+    m_model = new EntryTableModel(data, this);
 
     setEditTriggers(QAbstractItemView::NoEditTriggers);
     setSelectionBehavior(QAbstractItemView::SelectRows);

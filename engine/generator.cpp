@@ -33,20 +33,29 @@ void Generator::updateTileArray() {
     int yDim = mazeDims.y;
     int zDim = mazeDims.z;
 
+    tileArray.clear();
     if (tileArray.size() != xDim * yDim * zDim) {
-        tileArray = std::vector<Tile*>(xDim * yDim * zDim);
+        tileArray.resize(xDim * yDim * zDim);
     }
 
     for (int y = 0; y < yDim; y++) {
         for (int z = 0; z < zDim; z++) {
             for (int x = 0; x < xDim; x++) {
+                /*bool exists = false;
                 Wall wall(63);
-                if (tileArray[absoluteIndex(y, z, x)] != nullptr)
-                    wall = tileArray[absoluteIndex(y, z, x)]->wall;
+                if (tileArray[absoluteIndex(y, z, x)] != nullptr) {
+                    wall = tileArray[absoluteIndex(y, z, x)]->wall; exists = true;
+                }*/
+                // memory inefficient? just regenerate tbox data and create new for
+                //if (tileArray[absoluteIndex(y, z, x)] == nullptr) {
                 tileArray[absoluteIndex(y, z, x)] = new Tile(QVector3D(x, y, z) * (tileSize + tileSize * wallPtg),
                                                              tileSize, triplet<int>(x, y, z), mazeDims, wallPtg);
-                if (tileArray[absoluteIndex(y, z, x)] != nullptr)
-                    tileArray[absoluteIndex(y, z, x)]->wall = wall;
+                /*}
+                else {
+                    tileArray[absoluteIndex(y, z, x)]->wall.set(63);
+                }*/
+                /*if (exists)
+                    tileArray[absoluteIndex(y, z, x)]->wall = wall;*/
             }
         }
     }
@@ -78,12 +87,13 @@ void Generator::generateWalls() {
 void Generator::applyOpenings() {
     for (IndexFacing opening : openings) {
         auto index = opening.index;
+        qDebug() << "Removing wall at " << index.toString() << absoluteIndex(index.y, index.z, index.x);
         tileArray[absoluteIndex(index.y, index.z, index.x)]->wall.remove(opening.facing);
     }
 }
 
 void Generator::addOpening(triplet<int> index, WallFacing face) {
-    if (!valid(index.y, index.z, index.x) || !entryValidity(tileArray[absoluteIndex(index.y, index.z, index.x)], face)) {
+    if (!valid(index.y, index.z, index.x) || !entryValidity(tileArray[absoluteIndex(index)]->position, face)) {
         qDebug() << "Invalid opening indices" << index.toString() << face.toString();
         return;
     }
@@ -97,10 +107,10 @@ void Generator::eraseOpening(int ind) {
     openings.erase(openings.begin()+ind);
 }
 
-bool Generator::entryValidity(Tile* entryTile, WallFacing entryFace) {
+bool Generator::entryValidity(QVector3D &position, WallFacing &entryFace) {
     QVector3D entranceFaceOffset = entryFace.getNormal() / 100;
 
-    QVector3D startVec(entryTile->position);
+    QVector3D startVec(position);
     startVec = startVec + entranceFaceOffset;
     QVector3D offVec = startVec + tileSize + tileSize * (2 * wallPtg);
 
@@ -186,20 +196,40 @@ void Generator::kruskal() {
 
 
 void Generator::setDims(triplet<int> newDims) {
-    for (IndexFacing& opening : openings) {
-        triplet<int> &ind = opening.index;
-        if (ind.x == mazeDims.x-1 && mazeDims.x < newDims.x) {
-            ind.x = newDims.x-1;
-        }
-        if (ind.y == mazeDims.y-1 && mazeDims.y < newDims.y) {
-            ind.y = newDims.y-1;
-        }
-        if (ind.z == mazeDims.z-1 && mazeDims.z < newDims.z) {
-            ind.z = newDims.z-1;
-        }
-    }
-
+    int iter = 0;
+    triplet<int> delta = newDims - mazeDims;
+    //qDebug() << bounds << tileSize;
+    bounds += (tileSize * (1 + wallPtg)) * QVector3D(delta.x, delta.y, delta.z);
+    //qDebug() << bounds;
+    auto oldDims = mazeDims;
     mazeDims = newDims;
+    updateTileArray();
+    for (IndexFacing& opening : openings) {
+        triplet<int> oldInd = opening.index;
+        triplet<int> &ind = opening.index;
+        bool changed = false;
+        if (ind.x == oldDims.x-1 && oldDims.x != newDims.x) {
+            ind.x = newDims.x-1;
+            changed = true;
+        }
+        if (ind.y == oldDims.y-1 && oldDims.y != newDims.y) {
+            ind.y = newDims.y-1;
+            changed = true;
+        }
+        if (ind.z == oldDims.z-1 && oldDims.z != newDims.z) {
+            ind.z = newDims.z-1;
+            changed = true;
+        }
+        //qDebug() << ind.toString() << entryValidity(tileArray[absoluteIndex(ind)]->position, opening.facing);
+        if (changed && !entryValidity(tileArray[absoluteIndex(ind)]->position, opening.facing)) {
+            ind = oldInd;
+            changed = false;
+        }
 
+        if (changed) emit openingInvolutarelyChanged(iter, opening);
+        iter++;
+        //qDebug() << ind.toString();
+    }
+    emit boundsInvolutarelyChanged(bounds);
     applyOpenings();
 }

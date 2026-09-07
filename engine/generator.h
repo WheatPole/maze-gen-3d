@@ -7,13 +7,12 @@
 class Generator : public QObject {
     Q_OBJECT
 
+public:
     struct IndexFacing {
         triplet<int> index;
         WallFacing facing;
         IndexFacing(triplet<int> _index, WallFacing _facing) : index(_index), facing(_facing) {}
     };
-
-public:
     // Origin - the bottom corner from which the generator will build
     QVector3D origin;
     triplet<int> mazeDims;
@@ -50,6 +49,9 @@ public:
     inline int absoluteIndex(int y, int z, int x) const {
         return y * mazeDims.x * mazeDims.z + z * mazeDims.x + x;
     }
+    inline int absoluteIndex(triplet<int> index) const {
+        return index.y * mazeDims.x * mazeDims.z + index.z * mazeDims.x + index.x;
+    }
 
     void refreshWalls();
     void generateWalls();
@@ -57,7 +59,7 @@ public:
     void addOpening(triplet<int> index, WallFacing face);
     void eraseOpening(int index);
     void applyOpenings();
-    bool entryValidity(Tile* entryTile, WallFacing entryFace);
+    bool entryValidity(QVector3D &position, WallFacing &entryFace);
 
     void kruskal();
 
@@ -103,7 +105,7 @@ public:
     }
 
 signals:
-    // implement
-    void openingChanged(int ind);
+    void openingInvolutarelyChanged(int ind, IndexFacing opening);
+    void boundsInvolutarelyChanged(QVector3D newBounds);
 };
 #endif // GENERATOR_H

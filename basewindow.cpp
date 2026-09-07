@@ -88,15 +88,15 @@ void BaseWindow::setupLayout() {
             QLabel *openingsLbl = new QLabel("Openings", this);
             parameterLayout->addWidget(openingsLbl);
 
-            entranceTable = new EntryTable(this);
+            entranceTable = new EntryTable(&(gen->openings), this);
             parameterLayout->addWidget(entranceTable);
 
             //openingList->setHorizontalHeader(new QHeaderView());
 
             //openingListModel->setHorizontalHeaderLabels(QStringList() << "Local index" << "Facing");
 
-            entranceTable->appendData({0,1,1}, WallFacing::XNEG);
-            entranceTable->appendData({2,1,1}, WallFacing::XPOS);
+            //entranceTable->appendData({0,1,1}, WallFacing::XNEG);
+            //entranceTable->appendData({2,1,1}, WallFacing::XPOS);
 
             QHBoxLayout *openingLyt = new QHBoxLayout(this);
             openingLyt->setAlignment(Qt::AlignTop);
@@ -148,6 +148,12 @@ void BaseWindow::setupLayout() {
 }
 
 void BaseWindow::setupConnections() {
+    QObject::connect(gen, &Generator::boundsInvolutarelyChanged, [&] (QVector3D bounds) {
+        sizeBoxes[0]->setValue(bounds.x());
+        sizeBoxes[1]->setValue(bounds.y());
+        sizeBoxes[2]->setValue(bounds.z());
+    });
+
     QObject::connect(generateButton, &QPushButton::clicked, [&]() {
         gen->generateWalls();
         refreshView();
@@ -159,29 +165,33 @@ void BaseWindow::setupConnections() {
         model->mesh->updateVbox();
         refreshView();
     });
+    // duplicate openings check?
     QObject::connect(roomBoxes[0], &QSpinBox::valueChanged, [&](int val) {
         auto newDims = gen->mazeDims;
         newDims.setX(val);
         gen->setDims(newDims);
-        gen->updateTileArray();
+        //gen->updateTileArray();
         model->mesh->updateVbox();
         refreshView();
+        entranceTable->update();
     });
     QObject::connect(roomBoxes[1], &QSpinBox::valueChanged, [&](int val) {
         auto newDims = gen->mazeDims;
         newDims.setY(val);
         gen->setDims(newDims);
-        gen->updateTileArray();
+        //gen->updateTileArray();
         model->mesh->updateVbox();
         refreshView();
+        entranceTable->update();
     });
     QObject::connect(roomBoxes[2], &QSpinBox::valueChanged, [&](int val) {
         auto newDims = gen->mazeDims;
         newDims.setZ(val);
         gen->setDims(newDims);
-        gen->updateTileArray();
+        //gen->updateTileArray();
         model->mesh->updateVbox();
         refreshView();
+        entranceTable->update();
     });
     //QObject::connect()
 }

@@ -11,7 +11,7 @@ class EntryTable : public QTableView
 {
     Q_OBJECT
 public:
-    EntryTable(QWidget *parent = nullptr);
+    EntryTable(std::vector<EntryTableModel::RowItem> *data, QWidget *parent = nullptr);
     void resizeEvent(QResizeEvent *event) override;
 
     inline bool insertData(int row, triplet<int> lIndex, WallFacing facing) {

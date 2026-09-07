@@ -15,6 +15,19 @@ struct triplet {
         else
             return *this;
     }
+    triplet<T> operator +(triplet<T>& vector) {
+        if (std::is_same<T, int>::value || std::is_same<T, double>::value || std::is_same<T, float>::value)
+            return triplet<T>(x + vector.x, y + vector.y, z + vector.z);
+        else
+            return *this;
+    }
+
+    triplet<T> operator -(triplet<T>& vector) {
+        if (std::is_same<T, int>::value || std::is_same<T, double>::value || std::is_same<T, float>::value)
+            return triplet<T>(x - vector.x, y - vector.y, z - vector.z);
+        else
+            return *this;
+    }
     inline void setX(T val) {
         x = val;
     }

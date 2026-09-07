@@ -6,24 +6,25 @@
 #include <QWidget>
 #include <QMap>
 #include "../util/triplet.h"
-#include "../engine/wallfacing.h"
+#include "../engine/generator.h"
 
 class EntryTableModel : public QAbstractTableModel
 {
     Q_OBJECT
 public:
-    struct RowItem {
+    using RowItem = Generator::IndexFacing;
+    /*struct RowItem {
         triplet<int> localIndex;
         WallFacing facing;
         RowItem(triplet<int> _localIndex, WallFacing _facing) : localIndex(_localIndex), facing(_facing) {}
-    };
-    explicit EntryTableModel(QObject *parent = nullptr);
+    };*/
+    explicit EntryTableModel(std::vector<RowItem> *data, QObject *parent = nullptr);
     //QModelIndex	index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
     bool insertData(int row, triplet<int> lIndex, WallFacing facing);
     bool appendData(triplet<int> lIndex, WallFacing facing);
     RowItem eraseData(int row);
     inline int rowCount(const QModelIndex &parent = QModelIndex()) const override {
-        return rowData.size();
+        return rowData->size();
     }
     inline int columnCount(const QModelIndex &parent = QModelIndex()) const override {
         return 3;
@@ -34,7 +35,7 @@ public:
 
 private:
 
-    QList<RowItem> rowData;
+    std::vector<RowItem> *rowData;
 
 signals:
     //void dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles = QVector<int>());
