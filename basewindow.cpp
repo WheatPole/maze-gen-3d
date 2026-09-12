@@ -152,6 +152,10 @@ void BaseWindow::setupConnections() {
         sizeBoxes[0]->setValue(bounds.x());
         sizeBoxes[1]->setValue(bounds.y());
         sizeBoxes[2]->setValue(bounds.z());
+
+        //recenter view
+        QVector3D center = bounds/2;
+        renderView->getCamera()->setPosition(center - renderView->getCamera()->getStaticDistance() * renderView->getCamera()->calcCameraFront());
     });
 
     QObject::connect(generateButton, &QPushButton::clicked, [&]() {
@@ -161,7 +165,6 @@ void BaseWindow::setupConnections() {
 // TODO: not change global size
     QObject::connect(wallPtg, &QDoubleSpinBox::valueChanged, [&](double val) {
         gen->setWallPtg(val);
-        gen->updateTileArray();
         model->mesh->updateVbox();
         refreshView();
     });
@@ -170,7 +173,7 @@ void BaseWindow::setupConnections() {
         auto newDims = gen->mazeDims;
         newDims.setX(val);
         gen->setDims(newDims);
-        //gen->updateTileArray();
+
         model->mesh->updateVbox();
         refreshView();
         entranceTable->update();
@@ -179,7 +182,7 @@ void BaseWindow::setupConnections() {
         auto newDims = gen->mazeDims;
         newDims.setY(val);
         gen->setDims(newDims);
-        //gen->updateTileArray();
+
         model->mesh->updateVbox();
         refreshView();
         entranceTable->update();
@@ -188,12 +191,69 @@ void BaseWindow::setupConnections() {
         auto newDims = gen->mazeDims;
         newDims.setZ(val);
         gen->setDims(newDims);
-        //gen->updateTileArray();
+
         model->mesh->updateVbox();
         refreshView();
         entranceTable->update();
     });
-    //QObject::connect()
+
+    QObject::connect(sizeBoxes[0], &QDoubleSpinBox::valueChanged, [&](double val) {
+        auto newBounds = gen->bounds;
+        // Cyclic calling, don't do anything
+        if (val == newBounds.x()) {
+            return;
+        }
+        if (linkedSize->isChecked()) {
+            double rel = val/gen->bounds.x();
+            newBounds *= rel;
+        }
+        else {
+            newBounds.setX(val);
+        }
+        qDebug() << newBounds;
+        gen->setBounds(newBounds);
+
+        model->mesh->updateVbox();
+        refreshView();
+    });
+    QObject::connect(sizeBoxes[1], &QDoubleSpinBox::valueChanged, [&](double val) {
+        auto newBounds = gen->bounds;
+        // Cyclic calling, don't do anything
+        if (val == newBounds.y()) {
+            return;
+        }
+        if (linkedSize->isChecked()) {
+            double rel = val/gen->bounds.y();
+            newBounds *= rel;
+        }
+        else {
+            newBounds.setY(val);
+        }
+
+        gen->setBounds(newBounds);
+
+        model->mesh->updateVbox();
+        refreshView();
+    });
+    QObject::connect(sizeBoxes[2], &QDoubleSpinBox::valueChanged, [&](double val) {
+        auto newBounds = gen->bounds;
+        // Cyclic calling, don't do anything
+        if (val == newBounds.z()) {
+            return;
+        }
+        if (linkedSize->isChecked()) {
+            double rel = val/gen->bounds.z();
+            newBounds *= rel;
+        }
+        else {
+            newBounds.setZ(val);
+        }
+
+        gen->setBounds(newBounds);
+
+        model->mesh->updateVbox();
+        refreshView();
+    });
 }
 
 BaseWindow::~BaseWindow() = default;

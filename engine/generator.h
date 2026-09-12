@@ -27,10 +27,14 @@ public:
 
     bool*** buffer;
     double wallPtg;
-    // todo? add an additional parameter for floor (box) height
 
     Generator(QVector3D _origin, triplet<int> _mazeDims, QVector3D _bounds, double wallPercentage);
-    void updateTileArray();
+
+    // Updates tiles (and tileboxes within them) to fit the bounds and dims
+    // Reset indicates whether the tile array should be reset or not
+    // It is highly recommended to RESET the array when working
+    // with new maze dimensions, due to the structure of the array (1 dimensional array)
+    void updateTiles(bool resetWalls, bool resetDims);
 
     inline double wallWidth(WallFacing dir) const {
         if (dir == WallFacing::XNEG || dir == WallFacing::XPOS) {
@@ -46,14 +50,13 @@ public:
         return -1;
     }
 
-    inline int absoluteIndex(int y, int z, int x) const {
+    constexpr inline int absoluteIndex(int y, int z, int x) const {
         return y * mazeDims.x * mazeDims.z + z * mazeDims.x + x;
     }
     inline int absoluteIndex(triplet<int> index) const {
         return index.y * mazeDims.x * mazeDims.z + index.z * mazeDims.x + index.x;
     }
 
-    void refreshWalls();
     void generateWalls();
 
     void addOpening(triplet<int> index, WallFacing face);
@@ -97,12 +100,8 @@ public:
         return res;
     }
     void setDims(triplet<int> newDims);
-    inline void setBounds(QVector3D newBounds) {
-        bounds = newBounds;
-    }
-    inline void setWallPtg(double val) {
-        wallPtg = val;
-    }
+    void setBounds(QVector3D newBounds);
+    void setWallPtg(double val);
 
 signals:
     void openingInvolutarelyChanged(int ind, IndexFacing opening);

@@ -6,7 +6,10 @@ View3D::View3D(QVector3D cameraPos, QVector3D cameraCentre, QWidget *parent)
     setFocusPolicy(Qt::StrongFocus);
     this->setMinimumSize(500, 500);
 
+    this->installEventFilter(this);
+
     camera = new Camera(2.5, cameraPos, cameraCentre, true, this);
+    clickHandler = new InteractionHandler(camera, this);
 
     QObject::connect(camera, &Camera::cameraPositionChanged, [&] (QVector3D cameraPos) {
         this->update();
@@ -68,19 +71,35 @@ void View3D::paintGL()
 void View3D::resizeGL(int w, int h)
 {
     glViewport(0,0,w,h);
-    qreal aspect = qreal(w) / qreal(h ? h : 1);
-    //this->adjustSize();
-    // Set near plane to 3.0, far plane to 7.0, field of view 45 degrees
-    const qreal zNear = 0.1, zFar = 1500.0, fov = 70.0;
 
-    // Reset projection
-    projection.setToIdentity();
-
-    // Set perspective projection
-    projection.perspective(fov, aspect, zNear, zFar);
     program.bind();
     program.setUniformValue("projection", projection);
     program.release();
+}
+
+bool View3D::eventFilter(QObject* object, QEvent* event) {
+    //qDebug() << "Recieved event of type " << event->type() << event;
+    if (event->type() == QEvent::KeyPress) {
+        return camera->handleKeyPress(static_cast<QKeyEvent*>(event));
+    }
+    else if (event->type() == QEvent::KeyRelease) {
+        return camera->handleKeyRelease(static_cast<QKeyEvent*>(event));
+    }
+    else if (event->type() == QEvent::MouseButtonPress) {
+        return camera->handleMousePress(static_cast<QMouseEvent*>(event));
+    }
+    else if (event->type() == QEvent::MouseButtonRelease) {
+        camera->handleMouseRelease(static_cast<QMouseEvent*>(event));
+        clickHandler->handleMouseRelease(static_cast<QMouseEvent*>(event));
+    }
+    else if (event->type() == QEvent::Wheel) {
+        return camera->handleWheel(static_cast<QWheelEvent*>(event));
+    }
+    else if (event->type() == QEvent::MouseMove) {
+        return camera->handleMouseMove(static_cast<QMouseEvent*>(event));
+
+    }
+    return false;
 }
 
 void View3D::initShaders() {

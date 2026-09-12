@@ -6,7 +6,6 @@ Camera::Camera(qreal cameraSpeed, QVector3D cameraPos, QVector3D cameraTarget, b
 
     maxCameraSpeed = cameraSpeed;
     minCameraSpeed = 0.1;
-    screen->installEventFilter(this);
 
     staticDistance = (_cameraTarget - _cameraPos).length();
 
@@ -54,112 +53,113 @@ bool Camera::update() {
     return changed;
 }
 
-bool Camera::eventFilter(QObject* object, QEvent* event) {
-    //qDebug() << "Recieved event of type " << event->type() << event;
-    if (event->type() == QEvent::KeyPress) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
-        switch (keyEvent->key()) {
-        case Qt::Key_W:
-        case Qt::Key_Up:
-            movement[Direction::Forward] = true;
-            return true;
-        case Qt::Key_S:
-        case Qt::Key_Down:
-            movement[Direction::Backward] = true;
-            return true;
-        case Qt::Key_A:
-        case Qt::Key_Left:
-            movement[Direction::Left] = true;
-            return true;
-        case Qt::Key_D:
-        case Qt::Key_Right:
-            movement[Direction::Right] = true;
-            return true;
-        case Qt::Key_Q:
-        case Qt::Key_Space:
-            movement[Direction::Up] = true;
-            return true;
-        case Qt::Key_E:
-            movement[Direction::Down] = true;
-            return true;
-        }
+bool Camera::handleKeyPress(QKeyEvent* keyEvent) {
+    switch (keyEvent->key()) {
+    case Qt::Key_W:
+    case Qt::Key_Up:
+        movement[Direction::Forward] = true;
+        return true;
+    case Qt::Key_S:
+    case Qt::Key_Down:
+        movement[Direction::Backward] = true;
+        return true;
+    case Qt::Key_A:
+    case Qt::Key_Left:
+        movement[Direction::Left] = true;
+        return true;
+    case Qt::Key_D:
+    case Qt::Key_Right:
+        movement[Direction::Right] = true;
+        return true;
+    case Qt::Key_Q:
+    case Qt::Key_Space:
+        movement[Direction::Up] = true;
+        return true;
+    case Qt::Key_E:
+        movement[Direction::Down] = true;
+        return true;
     }
-    else if (event->type() == QEvent::KeyRelease) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
-        switch (keyEvent->key()) {
-        case Qt::Key_W:
-        case Qt::Key_Up:
-            movement[Direction::Forward] = false;
-            return true;
-        case Qt::Key_S:
-        case Qt::Key_Down:
-            movement[Direction::Backward] = false;
-            return true;
-        case Qt::Key_A:
-        case Qt::Key_Left:
-            movement[Direction::Left] = false;
-            return true;
-        case Qt::Key_D:
-        case Qt::Key_Right:
-            movement[Direction::Right] = false;
-            return true;
-        case Qt::Key_Q:
-        case Qt::Key_Space:
-            movement[Direction::Up] = false;
-            return true;
-        case Qt::Key_E:
-            movement[Direction::Down] = false;
-            return true;
-        }
+    return false;
+}
+
+bool Camera::handleKeyRelease(QKeyEvent* keyEvent) {
+    switch (keyEvent->key()) {
+    case Qt::Key_W:
+    case Qt::Key_Up:
+        movement[Direction::Forward] = false;
+        return true;
+    case Qt::Key_S:
+    case Qt::Key_Down:
+        movement[Direction::Backward] = false;
+        return true;
+    case Qt::Key_A:
+    case Qt::Key_Left:
+        movement[Direction::Left] = false;
+        return true;
+    case Qt::Key_D:
+    case Qt::Key_Right:
+        movement[Direction::Right] = false;
+        return true;
+    case Qt::Key_Q:
+    case Qt::Key_Space:
+        movement[Direction::Up] = false;
+        return true;
+    case Qt::Key_E:
+        movement[Direction::Down] = false;
+        return true;
     }
-    else if (event->type() == QEvent::MouseButtonPress) {
-        // MouseButtomPress will be called before MouseMove
-        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
-        lastMousePos = mouseEvent->position();
-        mouseDown = true;
+    return false;
+}
+
+bool Camera::handleMousePress(QMouseEvent* mouseEvent) {
+    // MouseButtomPress will be called before MouseMove
+    lastMousePos = mouseEvent->position();
+    mouseDown = true;
+    return false;
+}
+
+bool Camera::handleMouseRelease(QMouseEvent* mouseEvent) {
+    mouseDown = false;
+    return false;
+}
+
+bool Camera::handleWheel(QWheelEvent* wheelEvent) {
+    if (wheelEvent->angleDelta().y() != 0) {
+        double angle = wheelEvent->angleDelta().y();
+        double factor = qPow(zoomBase, angle);
+        changeCameraDistance(staticDistance / factor);
+        emit cameraPositionChanged(_cameraPos);
     }
-    else if (event->type() == QEvent::MouseButtonRelease) {
-        mouseDown = false;
-    }
-    else if (event->type() == QEvent::Wheel) {
-        QWheelEvent* wheelEvent = static_cast<QWheelEvent*>(event);
-        if (wheelEvent->angleDelta().y() != 0) {
-            double angle = wheelEvent->angleDelta().y();
-            double factor = qPow(zoomBase, angle);
-            changeCameraDistance(staticDistance / factor);
-            emit cameraPositionChanged(_cameraPos);
-        }
-    }
-    else if (event->type() == QEvent::MouseMove) {
-        // will be executed only if it's held
-        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
-        QPointF mousePos = mouseEvent->position();
+    return false;
+}
 
-        QPointF offset = mousePos - lastMousePos;
-        lastMousePos = mouseEvent->position();
+bool Camera::handleMouseMove(QMouseEvent* mouseEvent) {
+    // will be executed only if it's held
+    QPointF mousePos = mouseEvent->position();
 
-        float sensitivity = 0.2f;
-        offset *= sensitivity;
+    QPointF offset = mousePos - lastMousePos;
+    lastMousePos = mouseEvent->position();
 
-        QVector3D camCentre = _cameraPos + calcCameraFront() * staticDistance;
+    float sensitivity = 0.2f;
+    offset *= sensitivity;
 
-        _yaw -= -offset.x();
-        _pitch -= offset.y();
+    QVector3D camCentre = _cameraPos + calcCameraFront() * staticDistance;
 
-        if(_pitch > 89.0f)
-            _pitch = 89.0f;
-        if(_pitch < -89.0f)
-            _pitch = -89.0f;
+    _yaw -= -offset.x();
+    _pitch -= offset.y();
 
-        QVector3D eulerVector = calcCameraFront();
-        _cameraFront = eulerVector;
+    if(_pitch > 89.0f)
+        _pitch = 89.0f;
+    if(_pitch < -89.0f)
+        _pitch = -89.0f;
 
+    QVector3D eulerVector = calcCameraFront();
+    _cameraFront = eulerVector;
 
-        // Third person view addition
+    // Third person view addition
 
-        eulerVector *= staticDistance;
-        _cameraPos = camCentre - eulerVector;
-    }
+    eulerVector *= staticDistance;
+    _cameraPos = camCentre - eulerVector;
     return false;
 }
 

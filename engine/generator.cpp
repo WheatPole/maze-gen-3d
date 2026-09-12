@@ -28,56 +28,39 @@ Generator::Generator(QVector3D _origin, triplet<int> _mazeDims, QVector3D _bound
     }
 }
 
-void Generator::updateTileArray() {
+void Generator::updateTiles(bool resetWalls, bool resetDims) {
     int xDim = mazeDims.x;
     int yDim = mazeDims.y;
     int zDim = mazeDims.z;
 
-    tileArray.clear();
-    if (tileArray.size() != xDim * yDim * zDim) {
-        tileArray.resize(xDim * yDim * zDim);
-    }
-
-    for (int y = 0; y < yDim; y++) {
-        for (int z = 0; z < zDim; z++) {
-            for (int x = 0; x < xDim; x++) {
-                /*bool exists = false;
-                Wall wall(63);
-                if (tileArray[absoluteIndex(y, z, x)] != nullptr) {
-                    wall = tileArray[absoluteIndex(y, z, x)]->wall; exists = true;
-                }*/
-                // memory inefficient? just regenerate tbox data and create new for
-                //if (tileArray[absoluteIndex(y, z, x)] == nullptr) {
-                tileArray[absoluteIndex(y, z, x)] = new Tile(QVector3D(x, y, z) * (tileSize + tileSize * wallPtg),
-                                                             tileSize, triplet<int>(x, y, z), mazeDims, wallPtg);
-                /*}
-                else {
-                    tileArray[absoluteIndex(y, z, x)]->wall.set(63);
-                }*/
-                /*if (exists)
-                    tileArray[absoluteIndex(y, z, x)]->wall = wall;*/
-            }
+    if (resetDims) {
+        if (tileArray.size() != xDim * yDim * zDim) {
+            //tileArray.clear();
+            tileArray.resize(xDim * yDim * zDim);
         }
     }
-}
-
-void Generator::refreshWalls() {
-    int xDim = mazeDims.x;
-    int yDim = mazeDims.y;
-    int zDim = mazeDims.z;
 
     // Refresh walls
     for (int y = 0; y < yDim; y++) {
         for (int z = 0; z < zDim; z++) {
             for (int x = 0; x < xDim; x++) {
-                tileArray[absoluteIndex(y, z, x)]->wall = Wall(63);
+                int ind = absoluteIndex(y, z, x);
+                Wall tempWall(63);
+                if (tileArray[ind] != nullptr && !resetWalls) {
+                    tempWall = tileArray[ind]->wall;
+                }
+                if (resetDims)
+                    tileArray[ind] = new Tile(QVector3D(x, y, z) * (tileSize + tileSize * wallPtg),
+                                                             tileSize, triplet<int>(x, y, z), mazeDims, wallPtg);
+                tileArray[ind]->wall = tempWall;
+
             }
         }
     }
 }
 
 void Generator::generateWalls() {
-    refreshWalls();
+    updateTiles(1, 0);
     // Kruskal maze generation algorithm
     kruskal();
     applyOpenings();
@@ -198,12 +181,12 @@ void Generator::kruskal() {
 void Generator::setDims(triplet<int> newDims) {
     int iter = 0;
     triplet<int> delta = newDims - mazeDims;
-    //qDebug() << bounds << tileSize;
+    qDebug() << bounds << tileSize << delta.toString() << newDims.toString();
     bounds += (tileSize * (1 + wallPtg)) * QVector3D(delta.x, delta.y, delta.z);
-    //qDebug() << bounds;
+    qDebug() << bounds;
     auto oldDims = mazeDims;
     mazeDims = newDims;
-    updateTileArray();
+    updateTiles(1, 1);
     for (IndexFacing& opening : openings) {
         triplet<int> oldInd = opening.index;
         triplet<int> &ind = opening.index;
@@ -230,6 +213,28 @@ void Generator::setDims(triplet<int> newDims) {
         iter++;
         //qDebug() << ind.toString();
     }
+
     emit boundsInvolutarelyChanged(bounds);
     applyOpenings();
+}
+
+void Generator::setWallPtg(double val) {
+    wallPtg = val;
+    updateTiles(0, 1);
+}
+
+void Generator::setBounds(QVector3D newBounds) {
+    bounds = newBounds;
+
+    int xDim = mazeDims.x;
+    int yDim = mazeDims.y;
+    int zDim = mazeDims.z;
+
+    tileSize = QVector3D(
+        bounds.x() / (xDim + wallPtg * (xDim + 1)),
+        bounds.y() / (yDim + wallPtg * (yDim + 1)),
+        bounds.z() / (zDim + wallPtg * (zDim + 1))
+        );
+
+    updateTiles(0, 1);
 }

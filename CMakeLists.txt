@@ -43,6 +43,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ui/entrytable.h ui/entrytable.cpp
         rendering/outlinedmodel.h rendering/outlinedmodel.cpp
         shaders/vshader_outline.glsl
+        rendering/interactionhandler.h rendering/interactionhandler.cpp
 
 
 

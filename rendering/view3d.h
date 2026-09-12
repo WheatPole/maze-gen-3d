@@ -17,7 +17,7 @@
 #include <QKeyEvent>
 #include <QOpenGLDebugLogger>
 #include "model.h"
-#include "camera.h"
+#include "interactionhandler.h"
 
 class View3D : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -41,11 +41,15 @@ public:
     void resizeGL(int w, int h) override;
 
     void timerEvent(QTimerEvent *event) override;
-    inline Camera* getCamera() {
+    bool eventFilter(QObject* object, QEvent* event) override;
+    constexpr inline Camera* getCamera() {
         return camera;
     }
     void logMessage(const QOpenGLDebugMessage &message);
     void logMessages();
+
+    inline QMatrix4x4 getProjection() const { return projection; }
+
     QList<Model*> modelList;
 signals:
     void needsRequesting(QPointF position);
@@ -54,6 +58,7 @@ private:
     //Terrain *terrain = nullptr;
 
     Camera *camera;
+    InteractionHandler *clickHandler;
 
     int verticesSize = 0;
     int indicesSize = 0;

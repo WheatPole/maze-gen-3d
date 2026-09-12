@@ -26,6 +26,22 @@ public:
     inline QVector3D position() {
         return _cameraPos;
     }
+    inline QMatrix4x4 getProjection() const {
+        QMatrix4x4 proj;
+        qreal aspect = qreal() / qreal(screen->height() ? screen->height() : 1);
+        const qreal zNear = 0.1, zFar = 1500.0, fov = 70.0;
+
+        // Reset projection
+        proj.setToIdentity();
+        // Set perspective projection
+        proj.perspective(fov, aspect, zNear, zFar);
+        return proj;
+    }
+    inline void setPosition(QVector3D newPos) {
+        _cameraPos = newPos;
+        emit cameraPositionChanged(newPos);
+    }
+
     inline qreal yaw() {
         return _yaw;
     }
@@ -63,12 +79,24 @@ public:
         _cameraPos.setZ(val);
     }
 
-    bool eventFilter(QObject* object, QEvent* event) override;
+    constexpr inline QOpenGLWidget* getScreen() {
+        return screen;
+    }
+
+    bool handleKeyPress(QKeyEvent* keyEvent);
+    bool handleKeyRelease(QKeyEvent* keyEvent);
+    bool handleMousePress(QMouseEvent* mouseEvent);
+    bool handleMouseRelease(QMouseEvent* mouseEvent);
+    bool handleWheel(QWheelEvent* wheelEvent);
+    bool handleMouseMove(QMouseEvent* mouseEvent);
+
     bool update();
-    QVector3D _cameraPos;
+
+    constexpr inline double getStaticDistance() { return staticDistance; };
 signals:
     void cameraPositionChanged(QVector3D newPos);
 private:
+    QVector3D _cameraPos;
     QVector3D _cameraTarget;
     QVector3D _cameraFront = QVector3D(0.0f, 0.0f, -1.0f);
     QVector3D _cameraUp = QVector3D(0.0f, 1.0f,  0.0f);
