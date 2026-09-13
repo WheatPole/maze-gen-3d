@@ -219,7 +219,16 @@ void Generator::setDims(triplet<int> newDims) {
 }
 
 void Generator::setWallPtg(double val) {
+    int xDim = mazeDims.x;
+    int yDim = mazeDims.y;
+    int zDim = mazeDims.z;
+
     wallPtg = val;
+    tileSize = QVector3D(
+        bounds.x() / (xDim + wallPtg * (xDim + 1)),
+        bounds.y() / (yDim + wallPtg * (yDim + 1)),
+        bounds.z() / (zDim + wallPtg * (zDim + 1))
+        );
     updateTiles(0, 1);
 }
 

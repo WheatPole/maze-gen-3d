@@ -34,6 +34,9 @@ void BaseWindow::setupLayout() {
     {
         renderView = new View3D(QVector3D(25, 25, 25), gen->bounds/2, this);
         renderView->appendModel(model);
+
+        setupInteractionPlanes();
+
         //renderView->setFixedSize(100, 100);
         outerLayout->addWidget(renderView, 3);
 
@@ -147,7 +150,27 @@ void BaseWindow::setupLayout() {
     }
 }
 
+double clamp(double val, double min, double max) {
+    if (val < min) val = min;
+    if (val > max) val = max;
+    return val;
+}
+
 void BaseWindow::setupConnections() {
+    QObject::connect(renderView->clickHandler, &InteractionHandler::intersectedPlane, [&] (InteractionHandler::Plane plane, QVector3D rayHit) {
+        // todo: parse down to specific index and facing (and append to table)
+        int x = (plane.size.x() == 0)? 0 : clamp( (rayHit.x() * gen->mazeDims.x) / plane.size.x(), 0, gen->mazeDims.x-1 );
+        int y = (plane.size.y() == 0)? 0 : clamp( (rayHit.y() * gen->mazeDims.y) / plane.size.y(), 0, gen->mazeDims.y-1 );
+        int z = (plane.size.z() == 0)? 0 : clamp( (rayHit.z() * gen->mazeDims.z) / plane.size.z(), 0, gen->mazeDims.z-1 );
+        qDebug() << plane.origin << plane.size << rayHit << x << y << z;
+        // this is beautiful how it works
+        Quad wall = gen->tileArray[gen->absoluteIndex(y, z, x)]->tBox->getQuad(WallFacing::fromNormal(plane.normal));
+        // it's not working on POS direction
+        qDebug() << wall.origin << wall.right << wall.up;
+        renderView->setSelection(View3D::Selection(wall.origin, wall.right + wall.up, plane.normal));
+        renderView->update();
+    });
+
     QObject::connect(gen, &Generator::boundsInvolutarelyChanged, [&] (QVector3D bounds) {
         sizeBoxes[0]->setValue(bounds.x());
         sizeBoxes[1]->setValue(bounds.y());
@@ -156,6 +179,8 @@ void BaseWindow::setupConnections() {
         //recenter view
         QVector3D center = bounds/2;
         renderView->getCamera()->setPosition(center - renderView->getCamera()->getStaticDistance() * renderView->getCamera()->calcCameraFront());
+
+        setupInteractionPlanes();
     });
 
     QObject::connect(generateButton, &QPushButton::clicked, [&]() {
@@ -164,8 +189,11 @@ void BaseWindow::setupConnections() {
     });
 // TODO: not change global size
     QObject::connect(wallPtg, &QDoubleSpinBox::valueChanged, [&](double val) {
+        qDebug() << gen->bounds;
         gen->setWallPtg(val);
+        qDebug() << gen->bounds;
         model->mesh->updateVbox();
+        qDebug() << gen->bounds;
         refreshView();
     });
     // duplicate openings check?
@@ -215,6 +243,7 @@ void BaseWindow::setupConnections() {
 
         model->mesh->updateVbox();
         refreshView();
+        setupInteractionPlanes();
     });
     QObject::connect(sizeBoxes[1], &QDoubleSpinBox::valueChanged, [&](double val) {
         auto newBounds = gen->bounds;
@@ -234,6 +263,7 @@ void BaseWindow::setupConnections() {
 
         model->mesh->updateVbox();
         refreshView();
+        setupInteractionPlanes();
     });
     QObject::connect(sizeBoxes[2], &QDoubleSpinBox::valueChanged, [&](double val) {
         auto newBounds = gen->bounds;
@@ -253,6 +283,7 @@ void BaseWindow::setupConnections() {
 
         model->mesh->updateVbox();
         refreshView();
+        setupInteractionPlanes();
     });
 }
 

@@ -15,6 +15,9 @@ uniform vec4 objectColor;
 uniform vec4 lightColor;
 uniform vec4 lightPos;
 
+uniform vec4 selectionStart;
+uniform vec4 selectionEnd;
+uniform vec4 selectionColor;
 //vec4 fog
 
 void main()
@@ -33,4 +36,13 @@ void main()
 
     vec3 result = (ambient + diffuse)/* * sampleColor.xyz*/;
     gl_FragColor = vec4(result, 1.0) * objectColor/* * texture2D(texture, v_texcoord) */;
+    if (selectionStart.x - 1e-5 <= FragPos.x
+            && selectionStart.y - 1e-5 <= FragPos.y
+            && selectionStart.z - 1e-5 <= FragPos.z
+            && selectionEnd.x + 1e-5 >= FragPos.x
+            && selectionEnd.y + 1e-5 >= FragPos.y
+            && selectionEnd.z + 1e-5 >= FragPos.z) {
+        gl_FragColor = gl_FragColor * selectionColor/* * texture2D(texture, v_texcoord) */;
+    }
+
 }

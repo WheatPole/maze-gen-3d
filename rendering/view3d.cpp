@@ -36,9 +36,8 @@ void View3D::initializeGL()
 
     initShaders();
 
-    projection.setToIdentity();
     program.bind();
-    program.setUniformValue("projection", projection);
+    program.setUniformValue("projection", QMatrix4x4());
     program.setUniformValue("model", QMatrix4x4());
     program.release();
     for (Model *model : modelList) {
@@ -58,7 +57,7 @@ void View3D::paintGL()
     QMatrix4x4 view = camera->getView();
     // Set modelview-projection matrix
     program.setUniformValue("view", view);
-    program.setUniformValue("projection", projection);
+    program.setUniformValue("projection", camera->getProjection());
 
     //program.setUniformValue("mvp_matrix", projection * view);
     for (Model *model : modelList) {
@@ -73,7 +72,7 @@ void View3D::resizeGL(int w, int h)
     glViewport(0,0,w,h);
 
     program.bind();
-    program.setUniformValue("projection", projection);
+    program.setUniformValue("projection", camera->getProjection());
     program.release();
 }
 
@@ -133,6 +132,8 @@ void View3D::initShaders() {
     }
     program.setUniformValue("lightColor", QVector4D(1.0, 1.0, 1.0, 1.0));
     program.setUniformValue("lightPos", QVector4D(camera->position(), 1.0));
+    program.setUniformValue("selectionColor", QVector4D(0.35, 0.85, 0.35, 0.5));
+
     program.release();
 }
 
@@ -169,6 +170,17 @@ void View3D::logMessages() {
             qDebug() << "[ OpenGLError ]" << message.severity() << message.message();
         }
     }
+}
+
+void View3D::setSelection(Selection sel) {
+    selection = sel;
+    qDebug() << selection.origin << selection.size;
+    makeCurrent();
+    program.bind();
+    program.setUniformValue("selectionStart", QVector4D(sel.origin));
+    program.setUniformValue("selectionEnd", QVector4D(sel.origin + sel.size));
+    program.release();
+    doneCurrent();
 }
 
 View3D::~View3D() {

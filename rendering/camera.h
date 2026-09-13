@@ -28,7 +28,7 @@ public:
     }
     inline QMatrix4x4 getProjection() const {
         QMatrix4x4 proj;
-        qreal aspect = qreal() / qreal(screen->height() ? screen->height() : 1);
+        qreal aspect = qreal(screen->width()) / qreal(screen->height() ? screen->height() : 1);
         const qreal zNear = 0.1, zFar = 1500.0, fov = 70.0;
 
         // Reset projection

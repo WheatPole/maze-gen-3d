@@ -22,7 +22,10 @@
 class View3D : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
+
 public:
+    using Selection = InteractionHandler::Plane;
+
     View3D(QVector3D cameraPos, QVector3D cameraCentre, QWidget *parent = nullptr);
     void initShaders();
     void appendModel(Model* model);
@@ -48,22 +51,21 @@ public:
     void logMessage(const QOpenGLDebugMessage &message);
     void logMessages();
 
-    inline QMatrix4x4 getProjection() const { return projection; }
-
     QList<Model*> modelList;
+    Camera *camera;
+
+    InteractionHandler *clickHandler;
+    Selection selection;
+    void setSelection(Selection sel);
 signals:
     void needsRequesting(QPointF position);
 private:
     QOpenGLShaderProgram program;
     //Terrain *terrain = nullptr;
 
-    Camera *camera;
-    InteractionHandler *clickHandler;
-
     int verticesSize = 0;
     int indicesSize = 0;
     //bool initialized = false;
-    QMatrix4x4 projection;
     QOpenGLTexture *texture;
     QBasicTimer updateTimer;
 

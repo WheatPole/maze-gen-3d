@@ -8,32 +8,36 @@ TileBox::TileBox(QVector3D _up, Quad _bottomQuad, std::array<Quad, 6> _innerQuad
 // Note: this actually doesn't work (not used anyway), as origin isn't changed at all
 Quad TileBox::getQuad(WallFacing facing) {
     Quad res(bottomQuad);
+    // bottomQuad.up - ZPOS
+    // bottomQuad.right - XPOS
     switch (facing.facing) {
         case Facing::YNEG:
                 res.right = bottomQuad.up;
                 res.up = bottomQuad.right;
                 break;
         case Facing::YPOS: {
-            //res = Origin(res.getOrigin().add(up));
+            res.addToOrigin(up);
             break;
         }
         case Facing::XNEG: {
-            res.right = bottomQuad.up;
+            res.right = bottomQuad.right;
             res.up = up;
             break;
         }
         case Facing::XPOS: {
-            res.right = up;
-            res.up = bottomQuad.up;
-            break;
-        }
-        case Facing::ZNEG: {
+            res.addToOrigin(bottomQuad.up);
             res.right = up;
             res.up = bottomQuad.right;
             break;
         }
+        case Facing::ZNEG: {
+            res.right = up;
+            res.up = bottomQuad.up;
+            break;
+        }
         case Facing::ZPOS: {
-            res.right = bottomQuad.right;
+            res.addToOrigin(bottomQuad.right);
+            res.right = bottomQuad.up;
             res.up = up;
             break;
         }

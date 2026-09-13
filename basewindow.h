@@ -50,5 +50,17 @@ private:
         model->refreshData();
         renderView->updateBuffers();
     }
+
+    // sets (updates) interaction planes for click registring
+    inline void setupInteractionPlanes() {
+        renderView->clickHandler->clearPlanes();
+        QVector3D origin = gen->origin, x = QVector3D(gen->bounds.x(), 0, 0), y = QVector3D(0, gen->bounds.y(), 0), z = QVector3D(0, 0, gen->bounds.z());
+        renderView->clickHandler->addPlane(origin, x + y, WallFacing::ZNEG.getNormal());
+        renderView->clickHandler->addPlane(origin + z, y + z, WallFacing::ZPOS.getNormal());
+        renderView->clickHandler->addPlane(origin, z + y, WallFacing::XNEG.getNormal());
+        renderView->clickHandler->addPlane(origin + x, z + y, WallFacing::XPOS.getNormal());
+        renderView->clickHandler->addPlane(origin, z + x, WallFacing::YNEG.getNormal());
+        renderView->clickHandler->addPlane(origin + y, x + z, WallFacing::YPOS.getNormal());
+    }
 };
 #endif // BASEWINDOW_H
