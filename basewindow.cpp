@@ -367,14 +367,12 @@ void BaseWindow::setupLayoutConnections() {
     // Export button
     QObject::connect(exportButton, &QPushButton::clicked, [&](bool checked) {
         //QFileDialog::getSaveFileName(this, "Save as", QDir::currentPath(), tr("Obj file (*.obj)"))
-        QFileDialog saveDialog(this, "Save as", QDir::currentPath());
+        QFileDialog saveDialog(this, "Save as", QDir::currentPath() + "/Maze Object");
         saveDialog.setAcceptMode(QFileDialog::AcceptSave);
         QStringList filters;
-        filters << "Text Files (*.obj)" << "All Files (*.*)";
+        filters << "Obj Files (*.obj)" << "All Files (*.*)";
         saveDialog.setNameFilters(filters);
-
         saveDialog.setDefaultSuffix("obj");
-
 
         if (saveDialog.exec() == QDialog::Accepted) {
             QString fileName = saveDialog.selectedFiles().first();
