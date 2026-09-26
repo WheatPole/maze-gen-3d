@@ -17,11 +17,20 @@ public:
     inline bool insertData(int row, triplet<int> lIndex, WallFacing facing) {
         return m_model->insertData(row, lIndex, facing);
     }
+    inline bool exists(const EntryTableModel::RowItem &data) const {
+        return m_model->exists(data);
+    }
     inline bool appendData(triplet<int> lIndex, WallFacing facing) {
         return m_model->appendData(lIndex, facing);
     }
-    inline EntryTableModel::RowItem eraseData(int row) {
-        return m_model->eraseData(row);
+    inline bool removeRows(int row) {
+        return m_model->removeRows(row);
+    }
+    inline int size() const {
+        return m_model->rowCount();
+    }
+    inline EntryTableModel* model() {
+        return m_model;
     }
 private:
     EntryTableModel *m_model;

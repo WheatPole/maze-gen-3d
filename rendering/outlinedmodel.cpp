@@ -163,7 +163,7 @@ void OutlinedModel::drawModel(QOpenGLShaderProgram *program) {
     outlineIndexBuffer.bind();
     program->setUniformValue("outline", 1);
     program->setUniformValue("objectColor", QVector4D(0.3, 0.3, 0.3, 1.0));
-    glFunc->glLineWidth(1.5);
+    glFunc->glLineWidth(1.67);
     glFunc->glDrawElements(GL_LINES, outlineIndices.size(), GL_UNSIGNED_INT, nullptr);
     vao.release();
     //program->setUniformValue("outline", 0);

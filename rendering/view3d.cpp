@@ -174,7 +174,7 @@ void View3D::logMessages() {
 
 void View3D::setSelection(Selection sel) {
     selection = sel;
-    qDebug() << selection.origin << selection.size;
+
     makeCurrent();
     program.bind();
     program.setUniformValue("selectionStart", QVector4D(sel.origin));

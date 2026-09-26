@@ -6,7 +6,15 @@ InteractionHandler::InteractionHandler(Camera *cam, QObject *parent)
 
 }
 
+bool isInsidePlane(QVector3D point, InteractionHandler::Plane plane, float epsilon)
+{
+    QVector3D min = plane.origin - QVector3D(epsilon, epsilon, epsilon);
+    QVector3D max = plane.origin + plane.size + QVector3D(epsilon, epsilon, epsilon);
 
+    return point.x() >= min.x() && point.x() <= max.x()
+           && point.y() >= min.y() && point.y() <= max.y()
+           && point.z() >= min.z() && point.z() <= max.z();
+}
 
 bool InteractionHandler::handleMouseRelease(QMouseEvent* mouseEvent) {
     if (mouseEvent->button() == Qt::RightButton) return false;
@@ -42,13 +50,9 @@ bool InteractionHandler::handleMouseRelease(QMouseEvent* mouseEvent) {
         // (k * vec.x + dist.x) * normal.x + ... = 0
         float k = -(QVector3D::dotProduct(dist, plane.normal)) / (QVector3D::dotProduct(ray3D, plane.normal));
         QVector3D intersectionPoint = ray3D * k + rayOrigin;
-        //qDebug() << "Got " << intersectionPoint << " for " << plane.origin << plane.size;
-        if (intersectionPoint.x() >= plane.origin.x()
-            && intersectionPoint.y() >= plane.origin.y()
-            && intersectionPoint.z() >= plane.origin.z()
-            && intersectionPoint.x() <= plane.origin.x() + plane.size.x()
-            && intersectionPoint.y() <= plane.origin.y() + plane.size.y()
-            && intersectionPoint.z() <= plane.origin.z() + plane.size.z()) {
+        //qDebug() << "Got " << k << " of " << intersectionPoint << " for " << plane.origin << plane.size << plane.normal;
+        if (k < 0) continue;
+        if (isInsidePlane(intersectionPoint, plane, 1e-5)) {
             //qDebug() << "Ray inside " << plane.origin << plane.size << "(ray " << intersectionPoint << ")!";
             float dist = (intersectionPoint - rayOrigin).length();
             if (dist < minDist) {
@@ -61,10 +65,11 @@ bool InteractionHandler::handleMouseRelease(QMouseEvent* mouseEvent) {
 
     // not the best idea in practice ( < 100000)
     if (minDist < 100000) {
+        qDebug() << "Interacted with plane " << closestPlane.origin << closestPlane.size;
         emit intersectedPlane(closestPlane, rayHit);
     }
     else {
-        //no hit emit
+        emit noIntersections();
     }
 
     return false;

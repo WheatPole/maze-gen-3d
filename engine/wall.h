@@ -12,7 +12,7 @@ public:
         bin |= face.val();
     }
     void remove(WallFacing face) {
-        bin ^= face.val();
+        bin &= ~face.val();
     }
 
     void set(uint8_t _bin) { bin = _bin; }

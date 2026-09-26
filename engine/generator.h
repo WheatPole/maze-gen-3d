@@ -20,7 +20,7 @@ public:
     // Plain tile size, without walls
     QVector3D tileSize;
     // Outer-wall openings
-    std::vector<IndexFacing> openings;
+    std::vector<IndexFacing> *openings;
     // Order of axes - Y, Z, X, all tiles start with walls on all sides
     // Z -> up/down, X -> left/right
     std::vector<Tile*> tileArray;
@@ -105,6 +105,6 @@ public:
 
 signals:
     void openingInvolutarelyChanged(int ind, IndexFacing opening);
-    void boundsInvolutarelyChanged(QVector3D newBounds);
+    void boundsChanged(QVector3D newBounds);
 };
 #endif // GENERATOR_H

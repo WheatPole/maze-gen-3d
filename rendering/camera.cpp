@@ -113,13 +113,16 @@ bool Camera::handleKeyRelease(QKeyEvent* keyEvent) {
 
 bool Camera::handleMousePress(QMouseEvent* mouseEvent) {
     // MouseButtomPress will be called before MouseMove
-    lastMousePos = mouseEvent->position();
-    mouseDown = true;
+    if (mouseEvent->button() == Qt::RightButton) {
+        lastMousePos = mouseEvent->position();
+        mouseDown = true;
+    }
     return false;
 }
 
 bool Camera::handleMouseRelease(QMouseEvent* mouseEvent) {
-    mouseDown = false;
+    if (mouseEvent->button() == Qt::RightButton)
+        mouseDown = false;
     return false;
 }
 
@@ -134,6 +137,7 @@ bool Camera::handleWheel(QWheelEvent* wheelEvent) {
 }
 
 bool Camera::handleMouseMove(QMouseEvent* mouseEvent) {
+    if (!mouseDown) return false;
     // will be executed only if it's held
     QPointF mousePos = mouseEvent->position();
 

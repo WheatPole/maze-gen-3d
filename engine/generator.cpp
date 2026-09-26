@@ -5,6 +5,7 @@
 
 Generator::Generator(QVector3D _origin, triplet<int> _mazeDims, QVector3D _bounds, double _wallPercentage)
     : origin(_origin), mazeDims(_mazeDims), bounds(_bounds), wallPtg(_wallPercentage) {
+    openings = new std::vector<IndexFacing>;
 
     int xDim = mazeDims.x;
     int yDim = mazeDims.y;
@@ -68,7 +69,7 @@ void Generator::generateWalls() {
 }
 
 void Generator::applyOpenings() {
-    for (IndexFacing opening : openings) {
+    for (IndexFacing opening : *openings) {
         auto index = opening.index;
         qDebug() << "Removing wall at " << index.toString() << absoluteIndex(index.y, index.z, index.x);
         tileArray[absoluteIndex(index.y, index.z, index.x)]->wall.remove(opening.facing);
@@ -80,14 +81,14 @@ void Generator::addOpening(triplet<int> index, WallFacing face) {
         qDebug() << "Invalid opening indices" << index.toString() << face.toString();
         return;
     }
-    openings.push_back({index, face});
+    openings->push_back({index, face});
     tileArray[absoluteIndex(index.y, index.z, index.x)]->wall.remove(face);
 }
 
 void Generator::eraseOpening(int ind) {
-    auto index = openings[ind].index;
-    tileArray[absoluteIndex(index.y, index.z, index.x)]->wall.add(openings[ind].facing);
-    openings.erase(openings.begin()+ind);
+    auto index = (*openings)[ind].index;
+    tileArray[absoluteIndex(index.y, index.z, index.x)]->wall.add((*openings)[ind].facing);
+    openings->erase(openings->begin()+ind);
 }
 
 bool Generator::entryValidity(QVector3D &position, WallFacing &entryFace) {
@@ -187,7 +188,7 @@ void Generator::setDims(triplet<int> newDims) {
     auto oldDims = mazeDims;
     mazeDims = newDims;
     updateTiles(1, 1);
-    for (IndexFacing& opening : openings) {
+    for (IndexFacing& opening : *openings) {
         triplet<int> oldInd = opening.index;
         triplet<int> &ind = opening.index;
         bool changed = false;
@@ -214,7 +215,7 @@ void Generator::setDims(triplet<int> newDims) {
         //qDebug() << ind.toString();
     }
 
-    emit boundsInvolutarelyChanged(bounds);
+    emit boundsChanged(bounds);
     applyOpenings();
 }
 
@@ -246,4 +247,5 @@ void Generator::setBounds(QVector3D newBounds) {
         );
 
     updateTiles(0, 1);
+    emit boundsChanged(bounds);
 }

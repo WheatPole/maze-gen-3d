@@ -26,6 +26,8 @@ class View3D : public QOpenGLWidget, protected QOpenGLFunctions
 public:
     using Selection = InteractionHandler::Plane;
 
+    static constexpr Selection NoSelection;
+
     View3D(QVector3D cameraPos, QVector3D cameraCentre, QWidget *parent = nullptr);
     void initShaders();
     void appendModel(Model* model);

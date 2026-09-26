@@ -1,6 +1,10 @@
 #include "basewindow.h"
 #include <QLabel>
 #include <QHeaderView>
+#include <QFileDialog>
+#include <fstream>
+#include "parsing/objparser.h"
+#include <QMessageBox>
 
 QFrame* separatorLine() {
     QFrame* separatorLine = new QFrame();
@@ -24,7 +28,8 @@ BaseWindow::BaseWindow(QWidget *parent)
     std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>(gen);
     model = new OutlinedModel(std::move(mesh), nullptr);
     setupLayout();
-    setupConnections();
+    setupRendererConnections();
+    setupLayoutConnections();
 }
 
 void BaseWindow::setupLayout() {
@@ -35,7 +40,7 @@ void BaseWindow::setupLayout() {
         renderView = new View3D(QVector3D(25, 25, 25), gen->bounds/2, this);
         renderView->appendModel(model);
 
-        setupInteractionPlanes();
+        updateInteractionPlanes();
 
         //renderView->setFixedSize(100, 100);
         outerLayout->addWidget(renderView, 3);
@@ -91,7 +96,7 @@ void BaseWindow::setupLayout() {
             QLabel *openingsLbl = new QLabel("Openings", this);
             parameterLayout->addWidget(openingsLbl);
 
-            entranceTable = new EntryTable(&(gen->openings), this);
+            entranceTable = new EntryTable(gen->openings, this);
             parameterLayout->addWidget(entranceTable);
 
             //openingList->setHorizontalHeader(new QHeaderView());
@@ -106,10 +111,11 @@ void BaseWindow::setupLayout() {
 
             parameterLayout->addLayout(openingLyt);
             {
-                entryButton = new QPushButton("Add opening", this);
-                removeButton = new QPushButton("Remove", this);
-                openingLyt->addWidget(entryButton);
-                openingLyt->addWidget(removeButton);
+                entryAddButton = new QPushButton("Add opening", this);
+                entryRemoveButton = new QPushButton("Remove", this);
+                openingLyt->addWidget(entryAddButton);
+                openingLyt->addWidget(entryRemoveButton);
+                updateEntryButtons();
 
             }
 
@@ -144,7 +150,7 @@ void BaseWindow::setupLayout() {
                 }
             }
 
-            exportButton = new QPushButton("Export as", this);
+            exportButton = new QPushButton("Export as obj", this);
             parameterLayout->addWidget(exportButton);
         }
     }
@@ -156,22 +162,48 @@ double clamp(double val, double min, double max) {
     return val;
 }
 
-void BaseWindow::setupConnections() {
+void BaseWindow::setupRendererConnections() {
     QObject::connect(renderView->clickHandler, &InteractionHandler::intersectedPlane, [&] (InteractionHandler::Plane plane, QVector3D rayHit) {
-        // todo: parse down to specific index and facing (and append to table)
-        int x = (plane.size.x() == 0)? 0 : clamp( (rayHit.x() * gen->mazeDims.x) / plane.size.x(), 0, gen->mazeDims.x-1 );
-        int y = (plane.size.y() == 0)? 0 : clamp( (rayHit.y() * gen->mazeDims.y) / plane.size.y(), 0, gen->mazeDims.y-1 );
-        int z = (plane.size.z() == 0)? 0 : clamp( (rayHit.z() * gen->mazeDims.z) / plane.size.z(), 0, gen->mazeDims.z-1 );
-        qDebug() << plane.origin << plane.size << rayHit << x << y << z;
+        // Ray hit without the extra wall edges (each outer rect on the mesh would be the same)
+        QVector3D stabilizedHit = rayHit - gen->tileSize * gen->wallPtg / 2;
+        QVector3D extendedTile = gen->tileSize * (1 + gen->wallPtg);
+        QVector3D coordsF = stabilizedHit / extendedTile;
+        int x = clamp( coordsF.x(), 0, gen->mazeDims.x-1 );
+        int y = clamp( coordsF.y(), 0, gen->mazeDims.y-1 );
+        int z = clamp( coordsF.z(), 0, gen->mazeDims.z-1 );
+
+        currentSelection = {{x, y, z}, WallFacing::fromNormal(plane.normal)};
+
         // this is beautiful how it works
         Quad wall = gen->tileArray[gen->absoluteIndex(y, z, x)]->tBox->getQuad(WallFacing::fromNormal(plane.normal));
-        // it's not working on POS direction
-        qDebug() << wall.origin << wall.right << wall.up;
+
         renderView->setSelection(View3D::Selection(wall.origin, wall.right + wall.up, plane.normal));
         renderView->update();
+
+        // "Add" button update
+        updateEntryButtons();
+        // Select the appropriate index
+        int index = entranceTable->model()->find(currentSelection);
+        if (index != -1)
+            entranceTable->selectionModel()->setCurrentIndex(entranceTable->model()->index(index, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        else if (entranceTable->size() > 0)
+            entranceTable->selectionModel()->setCurrentIndex(entranceTable->model()->index(0, 0),  QItemSelectionModel::Clear);
     });
 
-    QObject::connect(gen, &Generator::boundsInvolutarelyChanged, [&] (QVector3D bounds) {
+    QObject::connect(renderView->clickHandler, &InteractionHandler::noIntersections, [&] () {
+        currentSelection = { {-1, -1, -1}, WallFacing::XPOS};;
+
+        renderView->setSelection(View3D::NoSelection);
+        renderView->update();
+
+        // "Add" button update
+        updateEntryButtons();
+        // Select the appropriate index (none)
+        if (entranceTable->size() > 0)
+            entranceTable->selectionModel()->setCurrentIndex(entranceTable->model()->index(0, 0),  QItemSelectionModel::Clear);
+    });
+
+    QObject::connect(gen, &Generator::boundsChanged, [&] (QVector3D bounds) {
         sizeBoxes[0]->setValue(bounds.x());
         sizeBoxes[1]->setValue(bounds.y());
         sizeBoxes[2]->setValue(bounds.z());
@@ -180,49 +212,93 @@ void BaseWindow::setupConnections() {
         QVector3D center = bounds/2;
         renderView->getCamera()->setPosition(center - renderView->getCamera()->getStaticDistance() * renderView->getCamera()->calcCameraFront());
 
-        setupInteractionPlanes();
+        // recolour selection (if selected)
+        if (currentSelection.index.x != -1) {
+            Quad wall = gen->tileArray[gen->absoluteIndex(
+                                           currentSelection.index.y,
+                                           currentSelection.index.z,
+                                           currentSelection.index.x)]->tBox->getQuad(currentSelection.facing);
+
+            renderView->setSelection(View3D::Selection(wall.origin, wall.right + wall.up, currentSelection.facing.getNormal()));
+        }
+        updateInteractionPlanes();
     });
+}
+
+void BaseWindow::setupLayoutConnections() {
 
     QObject::connect(generateButton, &QPushButton::clicked, [&]() {
         gen->generateWalls();
         refreshView();
     });
-// TODO: not change global size
     QObject::connect(wallPtg, &QDoubleSpinBox::valueChanged, [&](double val) {
-        qDebug() << gen->bounds;
         gen->setWallPtg(val);
-        qDebug() << gen->bounds;
         model->mesh->updateVbox();
-        qDebug() << gen->bounds;
         refreshView();
     });
+    QObject::connect(entryAddButton, &QPushButton::clicked, [&](bool checked) {
+        // assuming currentSelection is specified
+        if (entranceTable->exists(currentSelection)) return;
+        entranceTable->appendData(currentSelection.index, currentSelection.facing);
+        entranceTable->selectionModel()->setCurrentIndex(entranceTable->model()->index(entranceTable->size()-1, 0), QItemSelectionModel::Select | QItemSelectionModel::Rows);
+
+        gen->applyOpenings();
+        model->mesh->updateVbox();
+        refreshView();
+    });
+
+    QObject::connect(entryRemoveButton, &QPushButton::clicked, [&](bool checked) {
+        // assuming currentSelection is specified
+        if (entranceTable->selectionModel()->selectedRows().size() == 0) return;
+
+        QModelIndexList rowList = entranceTable->selectionModel()->selectedRows();
+
+        std::sort(rowList.begin(), rowList.end(), [](const QModelIndex& a, const QModelIndex& b) {
+            return a.row() > b.row();
+        });
+
+        for (QModelIndex &index : rowList) {
+            qDebug() << index;
+            // directly editing the walls
+            auto data = entranceTable->model()->getRow(index);
+            gen->tileArray[gen->absoluteIndex(data.index)]->wall.add(data.facing);
+
+            entranceTable->removeRows(index.row());
+        }
+
+        // unnecessary
+        //gen->applyOpenings();
+        model->mesh->updateVbox();
+        refreshView();
+    });
+
     // duplicate openings check?
     QObject::connect(roomBoxes[0], &QSpinBox::valueChanged, [&](int val) {
         auto newDims = gen->mazeDims;
         newDims.setX(val);
         gen->setDims(newDims);
 
+        entranceTable->update();
         model->mesh->updateVbox();
         refreshView();
-        entranceTable->update();
     });
     QObject::connect(roomBoxes[1], &QSpinBox::valueChanged, [&](int val) {
         auto newDims = gen->mazeDims;
         newDims.setY(val);
         gen->setDims(newDims);
 
+        entranceTable->update();
         model->mesh->updateVbox();
         refreshView();
-        entranceTable->update();
     });
     QObject::connect(roomBoxes[2], &QSpinBox::valueChanged, [&](int val) {
         auto newDims = gen->mazeDims;
         newDims.setZ(val);
         gen->setDims(newDims);
 
+        entranceTable->update();
         model->mesh->updateVbox();
         refreshView();
-        entranceTable->update();
     });
 
     QObject::connect(sizeBoxes[0], &QDoubleSpinBox::valueChanged, [&](double val) {
@@ -238,12 +314,13 @@ void BaseWindow::setupConnections() {
         else {
             newBounds.setX(val);
         }
-        qDebug() << newBounds;
+        qDebug() << newBounds << gen->bounds << gen->tileSize;
         gen->setBounds(newBounds);
+        qDebug() << gen->bounds << gen->tileSize;
 
         model->mesh->updateVbox();
         refreshView();
-        setupInteractionPlanes();
+        updateInteractionPlanes();
     });
     QObject::connect(sizeBoxes[1], &QDoubleSpinBox::valueChanged, [&](double val) {
         auto newBounds = gen->bounds;
@@ -263,7 +340,7 @@ void BaseWindow::setupConnections() {
 
         model->mesh->updateVbox();
         refreshView();
-        setupInteractionPlanes();
+        updateInteractionPlanes();
     });
     QObject::connect(sizeBoxes[2], &QDoubleSpinBox::valueChanged, [&](double val) {
         auto newBounds = gen->bounds;
@@ -283,7 +360,35 @@ void BaseWindow::setupConnections() {
 
         model->mesh->updateVbox();
         refreshView();
-        setupInteractionPlanes();
+        updateInteractionPlanes();
+    });
+
+
+    // Export button
+    QObject::connect(exportButton, &QPushButton::clicked, [&](bool checked) {
+        //QFileDialog::getSaveFileName(this, "Save as", QDir::currentPath(), tr("Obj file (*.obj)"))
+        QFileDialog saveDialog(this, "Save as", QDir::currentPath());
+        saveDialog.setAcceptMode(QFileDialog::AcceptSave);
+        QStringList filters;
+        filters << "Text Files (*.obj)" << "All Files (*.*)";
+        saveDialog.setNameFilters(filters);
+
+        saveDialog.setDefaultSuffix("obj");
+
+
+        if (saveDialog.exec() == QDialog::Accepted) {
+            QString fileName = saveDialog.selectedFiles().first();
+            std::fstream stream(fileName.toStdString(), std::ios::out | std::ios::trunc);
+            if (!stream.is_open()) {
+                QMessageBox::critical(this, "Error", "Couldn't open file " + fileName);
+                return;
+            }
+            stream << ObjParser::constructObjString(*renderView->modelList[0]->mesh);
+            stream.close();
+
+            QMessageBox::information(this, "Info", "Successfully exported to " + fileName);
+        }
+
     });
 }
 

@@ -16,7 +16,7 @@ Quad TileBox::getQuad(WallFacing facing) {
                 res.up = bottomQuad.right;
                 break;
         case Facing::YPOS: {
-            res.addToOrigin(up);
+            res = res.addToOrigin(up);
             break;
         }
         case Facing::XNEG: {
@@ -25,7 +25,7 @@ Quad TileBox::getQuad(WallFacing facing) {
             break;
         }
         case Facing::XPOS: {
-            res.addToOrigin(bottomQuad.up);
+            res = res.addToOrigin(bottomQuad.up);
             res.right = up;
             res.up = bottomQuad.right;
             break;
@@ -36,7 +36,7 @@ Quad TileBox::getQuad(WallFacing facing) {
             break;
         }
         case Facing::ZPOS: {
-            res.addToOrigin(bottomQuad.right);
+            res = res.addToOrigin(bottomQuad.right);
             res.right = bottomQuad.up;
             res.up = up;
             break;

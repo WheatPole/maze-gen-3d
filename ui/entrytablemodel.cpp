@@ -18,23 +18,35 @@ bool EntryTableModel::appendData(triplet<int> lIndex, WallFacing facing) {
     beginInsertRows(QModelIndex(), rowCount(), rowCount());
     rowData->push_back({lIndex, facing});
     endInsertRows();
-
-    //emit dataChanged(index(0, 0), index(rowCount()-1, columnCount()-1));
+    emit dataChanged(index(0, 0), index(rowCount()-1, columnCount()-1));
     return true;
 }
 
-Generator::IndexFacing EntryTableModel::eraseData(int row) {
+bool EntryTableModel::exists(const RowItem &item) const {
+    auto it = rowData->begin();
+    while (it != rowData->end()) {
+        if (it->index == item.index && it->facing == item.facing) return true;
+        it++;
+    }
+    return false;
+}
+
+EntryTableModel::RowItem EntryTableModel::getRow(const QModelIndex &ind) const {
+    return (*rowData)[ind.row()];
+}
+
+bool EntryTableModel::removeRows(int row, int count, const QModelIndex &parent) {
     if (row >= rowCount()) {
         qFatal() << "Index exceeds row size";
-        return (*rowData)[0];
+        return false;
     }
-    RowItem data = (*rowData)[row];
-    beginRemoveRows(QModelIndex(), rowCount(), rowCount());
+
+    beginRemoveRows(QModelIndex(), row, row);
     rowData->erase(rowData->begin()+row);
     endRemoveRows();
 
-    //emit dataChanged(index(0, 0), index(rowCount()-1, columnCount()-1));
-    return data;
+    emit dataChanged(index(0, 0), index(rowCount()-1, columnCount()-1));
+    return true;
 }
 
 QVariant EntryTableModel::data(const QModelIndex &index, int role) const {

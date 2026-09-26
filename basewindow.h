@@ -39,11 +39,27 @@ private:
     QDoubleSpinBox* wallPtg;
     EntryTable *entranceTable;
 
-    QPushButton *entryButton, *removeButton, *generateButton, *exportButton;
+    QPushButton *entryAddButton, *entryRemoveButton, *generateButton, *exportButton;
     View3D *renderView;
 
+    EntryTableModel::RowItem currentSelection = { {-1, -1, -1}, WallFacing::XPOS};
+
     void setupLayout();
-    void setupConnections();
+    void setupLayoutConnections();
+    void setupRendererConnections();
+
+    inline void updateEntryButtons() {
+        if (currentSelection.index.x != -1) {
+            entryAddButton->setDisabled(false);
+            entryAddButton->setText("Add to list");
+        }
+        else {
+            entryAddButton->setDisabled(true);
+            entryAddButton->setText("Select a quad");
+        }
+
+        // if list selected... (for remove)
+    }
 
     inline void refreshView() {
         model->mesh->refresh();
@@ -52,15 +68,15 @@ private:
     }
 
     // sets (updates) interaction planes for click registring
-    inline void setupInteractionPlanes() {
+    inline void updateInteractionPlanes() {
         renderView->clickHandler->clearPlanes();
         QVector3D origin = gen->origin, x = QVector3D(gen->bounds.x(), 0, 0), y = QVector3D(0, gen->bounds.y(), 0), z = QVector3D(0, 0, gen->bounds.z());
-        renderView->clickHandler->addPlane(origin, x + y, WallFacing::ZNEG.getNormal());
-        renderView->clickHandler->addPlane(origin + z, y + z, WallFacing::ZPOS.getNormal());
         renderView->clickHandler->addPlane(origin, z + y, WallFacing::XNEG.getNormal());
         renderView->clickHandler->addPlane(origin + x, z + y, WallFacing::XPOS.getNormal());
         renderView->clickHandler->addPlane(origin, z + x, WallFacing::YNEG.getNormal());
-        renderView->clickHandler->addPlane(origin + y, x + z, WallFacing::YPOS.getNormal());
+        renderView->clickHandler->addPlane(origin + y, z + x, WallFacing::YPOS.getNormal());
+        renderView->clickHandler->addPlane(origin, x + y, WallFacing::ZNEG.getNormal());
+        renderView->clickHandler->addPlane(origin + z, x + y, WallFacing::ZPOS.getNormal());
     }
 };
 #endif // BASEWINDOW_H

@@ -44,5 +44,6 @@ void main()
             && selectionEnd.z + 1e-5 >= FragPos.z) {
         gl_FragColor = gl_FragColor * selectionColor/* * texture2D(texture, v_texcoord) */;
     }
+    //gl_FragColor *= vec4(FragPos.x / 10, FragPos.y/10, FragPos.z/10, 1.0);
 
 }

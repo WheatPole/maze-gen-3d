@@ -16,9 +16,14 @@ public:
         QVector3D origin;
         QVector3D size;
         QVector3D normal;
+        constexpr Plane() {
+            origin = QVector3D();
+            size = QVector3D();
+            normal = QVector3D();
+        }
         Plane(QVector3D _origin, QVector3D _size, QVector3D _normal)
             : origin(_origin), size(_size), normal(_normal) { }
-        Plane() {}
+        //Plane() {}
     };
 
     explicit InteractionHandler(Camera *cam, QObject *parent = nullptr);
@@ -36,6 +41,7 @@ public:
     }
 signals:
     void intersectedPlane(Plane plane, QVector3D rayHit);
+    void noIntersections();
 private:
     Camera *camera;
     QList<Plane> planes;
