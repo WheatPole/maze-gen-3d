@@ -5,7 +5,7 @@ A UI interface for constructing **3D mazes** and exporting them as models. Built
 <img width="1127" height="704" alt="image" src="https://github.com/user-attachments/assets/ad865524-ee25-489a-ad55-2be324dcca56" />
 The UI window features:
 
-- **3D visualization** of the model on the left
+- **3D visualization** of the model on the left (RMB to move the camera, LMB to select a quad)
 - **Configuration panel** on the right, which contains the following:
   - **Rooms per axis** - the dimensions of the maze structure itself
   - **Relative wall width** - coefficient which tells the program how big the walls should be, compared to room sizes
