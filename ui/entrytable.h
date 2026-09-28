@@ -6,6 +6,7 @@
 #include <QWidget>
 #include <QHeaderView>
 #include "entrytablemodel.h"
+#include "hoverdelegate.h"
 
 class EntryTable : public QTableView
 {
@@ -32,8 +33,12 @@ public:
     inline EntryTableModel* model() {
         return m_model;
     }
+    inline QModelIndex hoverIndex() const { return m_model->index(m_hoverRow, m_hoverColumn); }
+    void mouseMoveEvent(QMouseEvent *event) override;
 private:
+    int m_hoverRow = -1, m_hoverColumn = -1;
     EntryTableModel *m_model;
+    HoverDelegate *m_delegate;
     double proportions[3] = { 1, 5, 3 };
 };
 

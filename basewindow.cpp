@@ -272,6 +272,22 @@ void BaseWindow::setupLayoutConnections() {
         refreshView();
     });
 
+    QObject::connect(entranceTable->selectionModel(), &QItemSelectionModel::selectionChanged, [&](const QItemSelection& selected, const QItemSelection& deselected) {
+        if (selected.size() <= 0 || selected[0].indexes().size() <= 0) return;
+        auto item = entranceTable->model()->getRow(selected[0].indexes()[0]);
+        if (item.index.x == -1 || (currentSelection.index == item.index && currentSelection.facing == item.facing)) return;
+        currentSelection = item;
+
+        // recolour
+        Quad wall = gen->tileArray[gen->absoluteIndex(
+                                       currentSelection.index.y,
+                                       currentSelection.index.z,
+                                       currentSelection.index.x)]->tBox->getQuad(currentSelection.facing);
+
+        renderView->setSelection(View3D::Selection(wall.origin, wall.right + wall.up, currentSelection.facing.getNormal()));
+        renderView->update();
+    });
+
     // duplicate openings check?
     QObject::connect(roomBoxes[0], &QSpinBox::valueChanged, [&](int val) {
         auto newDims = gen->mazeDims;

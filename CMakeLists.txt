@@ -44,6 +44,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         rendering/outlinedmodel.h rendering/outlinedmodel.cpp
         shaders/vshader_outline.glsl
         rendering/interactionhandler.h rendering/interactionhandler.cpp
+        ui/hoverdelegate.h ui/hoverdelegate.cpp
 
 
 
